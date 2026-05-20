@@ -72,6 +72,7 @@ The Executor modifies application code **only** with approval from Claude or the
 - For **T2 large / T3**: present Codex's Phase 1 plan to User before proceeding with implementation.
 - Review the Executor's diff for T2-large and T3 tasks using `templates/review-template.md`.
 - Flag risks, regressions, doc-vs-code mismatches.
+- **Gate 2 scope check:** verify that every new file, class, or module in the diff appears in the TASK's `Files in scope → Create` list. Any unlisted construct is a scope violation — request removal or explicit justification before approving.
 - Update `.codex/knowledge/**` to keep project state coherent.
 
 **Does NOT:**
