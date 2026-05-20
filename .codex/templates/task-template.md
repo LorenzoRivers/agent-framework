@@ -13,6 +13,18 @@
 
 ---
 
+## Assumptions made
+
+[Explicit assumptions Claude made to interpret this request. Each assumption cites its source.
+For T1 tasks, this section is optional. For T2 and above, it is mandatory.
+The Executor and User read these at Gate 1 — wrong assumptions should be corrected before implementation starts.]
+
+- [Assumption 1] — source: [docs/dev-handbook.md / docs/prd.md / docs/tech-spec.md / docs/roadmap.md / TASK-NNN / User confirmed]
+- [Assumption 2] — source: [...]
+(none — delete this line if there are no assumptions beyond the request itself)
+
+---
+
 ## Behavior
 
 [What the system must do after this task is complete. Written as observable behaviors, not implementation steps. Use bullet points.]

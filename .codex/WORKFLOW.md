@@ -59,42 +59,58 @@ The User describes intent in natural language.
 
 ### Step 2 — Claude produces the TASK
 
-Claude:
-1. Reads relevant `.codex/knowledge/**` and `/docs/**` per the priority order in `AGENTS.md`.
-2. Produces a `TASK-NNN.md` file in `.codex/tasks/` using `templates/task-template.md`.
-3. Outputs a brief summary in chat: what the task does, why, what's at risk.
+Step 2 is a 4-phase process. Phases scale with task tier — see the table at the end of this section.
 
-**Claude does NOT read the application codebase to write tasks.** TASK files contain behavioral requirements and acceptance criteria — not code. The Executor reads and verifies the code in Phase 0.5.
+#### Phase A — Paraphrase (all tiers)
 
-If the request is too large for one task, Claude proposes a decomposition and asks the User which sub-task to start with.
+Before writing anything, Claude states in chat what it understood in concrete behavioral terms:
 
-#### Clarification questions format
+> "What I understood: [who does what, under what conditions, with what result]."
 
-When the User's request has ambiguities, Claude does **not** ask open questions. Every clarification question follows the mandatory format defined in `AGENTS.md` § "Decision protocol: ask with proposal":
+This is 1 sentence for T1, 2-3 for T2. Its purpose is to surface misalignment immediately — before any TASK file is produced.
+
+#### Phase B — Disambiguation (T2-medium and up)
+
+Claude runs the disambiguation checklist (see "Disambiguation checklists" section at the end of this file) for the request type in its head. Only truly ambiguous dimensions surface as questions — each using the mandatory proposal format from `AGENTS.md` § "Decision protocol: ask with proposal":
 
 ```
 ❓ Question: [ambiguous dimension]
-💡 Proposal: [recommended answer based on project context]
+💡 Proposal: [recommended answer]
 📎 Aligned with: [specific source]
 ```
 
-**Example** — User request: "Add a notifications page for the coach."
+If everything is unambiguous from the docs and project context: Phase B is skipped. No questions for the sake of asking.
+
+#### Phase C — Test scenarios preview (T2-medium and up)
+
+Before writing the full TASK, Claude proposes in chat the test scenarios list:
 
 ```
-❓ Q1: notification type?
-💡 Proposal: in-app only
-📎 Aligned with: docs/prd.md non-goal "no email marketing"; docs/tech-spec.md no email service configured
-
-❓ Q2: empty state behavior?
-💡 Proposal: "No notifications" message + icon, no CTA
-📎 Aligned with: docs/dev-handbook.md "empty state without CTA for consultation pages"; pattern in TASK-022
-
-❓ Q3: filters?
-💡 Proposal: no filters in this version
-📎 Aligned with: docs/roadmap.md filters are scheduled for BLOCK-N+2
+Proposed scenarios:
+Happy path: [action] → [result]
+Validation: [invalid input] → [error]
+Edge case: [boundary] → [result]
+Confirm, add, or remove?
 ```
 
-The User confirms with "ok" (3 seconds) or corrects point by point. Open questions ("What kind of notifications?") force the User to articulate from scratch and waste the project context Claude already has access to. **Open questions are not allowed.**
+The User confirms or adjusts. Claude writes the TASK only after scenarios are confirmed. For T2-small, Claude includes scenarios directly in the TASK without preview — they are visible at Gate 1 for correction.
+
+#### Phase D — Write the TASK
+
+Only after Phases A-C: Claude writes `TASK-NNN.md` using `templates/task-template.md`, incorporating the confirmed understanding, explicit assumptions (with sources), and approved test scenarios.
+
+**Claude does NOT read the application codebase to write tasks.** TASK files contain behavioral requirements — not code. The Executor reads and verifies the code in Phase 0.5.
+
+If the request is too large for one task, Claude proposes a decomposition before any other phase and asks the User which sub-task to start with.
+
+#### Tier scaling
+
+| Tier | Phase A | Phase B | Phase C | Assumptions in TASK |
+|---|---|---|---|---|
+| T1 | Internal — not shown in chat unless ambiguous | Skipped | Skipped | Optional |
+| T2-small | In chat, 1-2 sentences | Only if explicit ambiguity | Skipped — scenarios in TASK | Mandatory |
+| T2-medium | In chat, 2-3 sentences | Full checklist | Preview in chat | Mandatory |
+| T2-large / T3 | In chat, 3-5 sentences | Full checklist | Preview + explicit confirmation | Mandatory |
 
 ### Step 3 — Gate 1: Task approval
 
@@ -265,3 +281,74 @@ Verdict: Approved / Fix: <what>
 - ❌ "Fix this part" — too vague.
 - ❌ Executor commits to `main` — bypasses both gates.
 - ❌ Claude rewrites application code without User asking — out of role.
+
+---
+
+## Disambiguation checklists
+
+*Reference for Phase B of Step 2. Claude runs the relevant checklist in its head and surfaces only the ambiguous dimensions as questions — each with a proposal and source, per the AGENTS.md protocol.*
+
+*If a dimension is already answered by the User's request, the docs, or prior project decisions: skip it. No questions for the sake of asking.*
+
+---
+
+### UI / Screen task
+
+| Dimension | Verify |
+|---|---|
+| Empty state | What is shown when there is no data? |
+| Input validation | What is shown for empty / invalid input? After first submit or real-time? |
+| Error messages | What is the exact text? Inline under field, toast, or modal? |
+| Loading state | What is shown while async operation is in progress? |
+| Auth / visibility | Who sees this page? What do unauthorized users see? |
+| Layout | Mobile vs desktop: same layout or different? |
+| Missing data | What if a referenced entity doesn't exist? |
+| CTA presence | Is there an action button in the empty/error state? |
+
+---
+
+### API endpoint task
+
+| Dimension | Verify |
+|---|---|
+| Authentication | Is auth required? Which role? |
+| Ownership | Must the authenticated user own the resource? |
+| Required inputs | Which request body fields are mandatory vs optional? |
+| Validation errors | What is returned for invalid input (format, range, missing)? |
+| Not found | What is returned if the resource doesn't exist? 404 or empty list? |
+| Side effects | Does this endpoint send emails, trigger webhooks, charge payments? |
+| Idempotency | Is it safe to call multiple times with the same input? |
+
+---
+
+### DB schema / migration task
+
+| Dimension | Verify |
+|---|---|
+| Nullable fields | Which new fields are optional (nullable)? |
+| Defaults | What are the default values for new fields? |
+| Cascade on delete | What happens to related records when parent is deleted? |
+| Backward compatibility | Can the old code read the new schema without breaking? |
+| Data migration | Does existing data need to be backfilled? |
+
+---
+
+### Refactor task
+
+| Dimension | Verify |
+|---|---|
+| Behavior preservation | Which exact behaviors must remain identical? |
+| Existing tests | Are there tests that protect against regression? |
+| Dependents | What other modules call this code? |
+| Public API | Does this change the interface visible to other modules? |
+
+---
+
+### Bug fix task
+
+| Dimension | Verify |
+|---|---|
+| Root cause | Is the cause confirmed or a hypothesis? |
+| Reproduction | How to reproduce the bug reliably? |
+| Related behavior | Could the fix break adjacent behavior? |
+| Test | Does a test need to be added to prevent recurrence? |
