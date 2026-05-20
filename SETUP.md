@@ -68,28 +68,39 @@ Example:
 
 ## 4. Set up /docs structure
 
-Create your project documentation in `/docs/`. Recommended files:
+Copy the templates and fill them in — this is the most important setup step:
 
-| File | Content |
-|---|---|
-| `docs/prd.md` | Product requirements — what the product does and doesn't do |
-| `docs/tech-spec.md` | Architecture, data model, API contracts |
-| `docs/roadmap.md` | Block sequencing, scope per block |
-| `docs/dev-handbook.md` | Invariants, naming conventions, "DO NOT BREAK" rules |
-| `docs/design.md` | UX/UI contract (if applicable) |
+```sh
+cp docs/templates/prd-template.md       docs/prd.md
+cp docs/templates/tech-spec-template.md docs/tech-spec.md
+cp docs/templates/roadmap-template.md   docs/roadmap.md
+cp docs/templates/dev-handbook-template.md docs/dev-handbook.md
+```
 
-These are the **sources of truth** Claude uses to write tasks. The better they are, the better the tasks.
+**Fill in this order:**
+1. `docs/prd.md` — vision, non-goals, 2-3 key flows (30 min)
+2. `docs/tech-spec.md` — tech stack + data model (45 min)
+3. `docs/roadmap.md` — BLOCK-1 scope and rough task list (15 min)
+4. `docs/dev-handbook.md` — 3-4 invariants + naming conventions (20 min)
+
+**Minimum to start BLOCK-1:** `prd.md` (partial) + `tech-spec.md` (stack + data model) + `roadmap.md` (BLOCK-1 scope).
+
+`docs/design.md` is optional — add it only if the project has significant UI work requiring precise behavior spec.
+
+See `docs/README.md` for guidance on how Claude uses each document and what to write in each section.
 
 ---
 
 ## 5. Initialize knowledge files
 
-Copy the session handoff template:
+Copy the session handoff template and the first block brief:
 ```sh
 cp .codex/templates/session-handoff-template.md .codex/knowledge/project/session-handoff.md
+cp .codex/templates/block-brief-template.md .codex/knowledge/BLOCK-1-[slug]-brief.md
 ```
 
-Then fill in the initial state (Block 1, no tasks yet, fresh dev branch).
+Fill in `session-handoff.md` with the initial state (Block 1, no tasks yet, fresh dev branch).
+Fill in `BLOCK-1-[slug]-brief.md` with the block goal and rough task list from your roadmap.
 
 ---
 
