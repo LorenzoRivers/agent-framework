@@ -213,8 +213,17 @@ The following advanced agentic patterns are available as opt-in extensions. Each
 
 | Extension | Pattern | Activate when |
 |---|---|---|
+| `playwright/` | Codex writes + runs E2E browser tests per task | Project has a browser UI — **recommended for all web/mobile-web projects** |
 | `parallel-agents/` | Fan-out independent tasks, fan-in reviews | Tasks have no inter-dependencies |
 | `routing/` | Domain-based agent routing | Project has clearly separated domains (DB, UI, API) |
 | `self-eval-loop/` | Executor self-retries against objective criteria | Tasks have measurable, objective acceptance criteria |
 
 See `.codex/extensions/README.md` for activation instructions.
+
+### Playwright extension — when active
+
+When `playwright/` is active, the Executor must:
+1. Read the `## Test scenarios` section of the TASK file.
+2. In Phase 1 (T2 large / T3): include a `## Playwright tests to write` section in the implementation plan, listing each test case by name.
+3. During implementation: write or update `tests/[feature-name].spec.ts` **in the same commit** as the feature code.
+4. Run `{{TEST_COMMAND}}` after lint passes and report results in the execution log as a **separate section** from standard tests.
