@@ -59,7 +59,11 @@ If a scenario is missing here, the Executor must NOT assume the behavior — it 
 - `path/to/file.ts`
 
 **Create:**
+<!-- MANDATORY: list every new file, class, or module the Executor is authorized to create.
+     If this list is empty, the Executor must not create any new file, class, or module.
+     Any new construct not listed here is a scope violation and must be flagged in the execution log. -->
 - `path/to/new-file.ts`
+(none — delete this line if no new files are needed)
 
 **Read (for context only, do not modify):**
 - `path/to/reference.ts`

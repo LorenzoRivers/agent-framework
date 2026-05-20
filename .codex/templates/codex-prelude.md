@@ -44,6 +44,8 @@ Read this file **before** reading the TASK file. These rules apply to every task
 4. **No secrets:** never read, write, log, or commit `.env*` files. The runtime loads them automatically.
 5. **No dependency additions** without explicit task authorization.
 6. **No architectural decisions** — those belong to Claude Code.
+7. **No unlisted constructs:** never create a file, class, or module not listed in the TASK's `Files in scope → Create` section. If during implementation you determine that a new construct is genuinely necessary, stop — declare it as a FINE_TUNING deviation in the execution log with an explicit justification, and proceed only if the deviation is minor and does not affect other modules. Do not create it silently.
+8. **Implement directly:** satisfy the acceptance criteria using the fewest new constructs possible. If two approaches both satisfy the criteria, choose the one that introduces fewer new files, classes, and abstractions. Do not add error handling, validation, or abstractions beyond what the acceptance criteria require.
 <!-- {{INFRA_HARD_RULES}}: add project-specific forbidden operations. Examples:
      - Never run destructive DB operations (DROP, TRUNCATE, migrate reset) without explicit task authorization
      - Never deploy to production without explicit User trigger
@@ -178,6 +180,13 @@ As the **final step**, append the following section to the TASK file (`.codex/ta
 - <file> — <detailed description of what changed and why>
 - <file> — <detailed description>
 
+### New constructs introduced
+<!-- List every new file, class, or module created. For each one, state whether it appears
+     in the TASK's "Files in scope → Create" list. If it does not, justify why it was necessary. -->
+- `path/to/new-file.ts` — in Create list: yes | no — <justification if not in list>
+- `NewClass` in `existing-file.ts` — in Create list: yes | no — <justification if not in list>
+(none — if no new files, classes, or modules were created)
+
 ### Standard tests
 - `{{LINT_COMMAND}}` → PASS / FAIL
 - `{{UNIT_TEST_COMMAND}}` → N passed, M failed (or "not configured")
@@ -206,6 +215,10 @@ STATUS: COMPLETE | PARTIAL | BLOCKED
 WHAT WAS IMPLEMENTED:
 - path/to/file — detailed description of what changed and why
 - tests/feature.spec.ts — N Playwright tests written covering: [scenario names]
+
+NEW CONSTRUCTS INTRODUCED:
+- path/to/new-file.ts — in Create list: yes/no — <justification if not in list>
+(none — if no new files, classes, or modules were created)
 
 STANDARD TESTS:
 - {{LINT_COMMAND}} → PASS / FAIL
