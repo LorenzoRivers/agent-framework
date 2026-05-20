@@ -110,12 +110,54 @@ git checkout -b block/BLOCK-1-[your-first-block-slug]
 
 ---
 
-## 7. Choose extensions (optional)
+## 7. Set up Playwright E2E testing (recommended)
+
+Playwright is the recommended testing approach for any project with a browser UI. Set it up at BLOCK-1, before the first task — Codex will write and run tests automatically from then on.
+
+### Install
+
+```bash
+npm install --save-dev @playwright/test
+npx playwright install chromium
+```
+
+### Configure
+
+```bash
+mkdir tests
+cp .codex/extensions/playwright/playwright.config.template.ts tests/playwright.config.ts
+```
+
+Edit `tests/playwright.config.ts` and fill in:
+- `{{APP_BASE_URL}}` — e.g. `http://localhost:3000`
+- `{{APP_PORT}}` — e.g. `3000`
+- `{{DEV_SERVER_COMMAND}}` — e.g. `npm run dev`
+
+### Set the test command in codex-prelude
+
+In `.codex/templates/codex-prelude.md`, set:
+```
+{{TEST_COMMAND}}: cd tests && npx playwright test --config=playwright.config.ts 2>&1
+```
+
+### Activate in AGENTS.md
+
+In the extensions table in `.codex/AGENTS.md`, mark Playwright as active:
+```
+| `playwright/` | Codex writes + runs E2E tests per task | ✅ ACTIVE |
+```
+
+From this point, every task that has a `## Test scenarios` section will produce a `.spec.ts` file written by Codex, run automatically, and reported separately in the execution log.
+
+---
+
+## 8. Choose additional extensions (optional)
 
 Review `.codex/extensions/README.md` to decide which advanced agentic patterns to activate.
 
 | Extension | Activate if... |
 |---|---|
+| `playwright/` | Project has a browser UI — **recommended for all web/mobile-web projects** |
 | `parallel-agents/` | You have tasks with no inter-dependencies that you want to run simultaneously |
 | `routing/` | Your project has clearly separate domains (DB, UI, API) with different agents |
 | `self-eval-loop/` | You have tasks with fully objective, measurable acceptance criteria |
@@ -124,7 +166,7 @@ To activate an extension, add the relevant policy section to `.codex/AGENTS.md` 
 
 ---
 
-## 8. Verify the setup
+## 9. Verify the setup
 
 Before starting your first task, verify:
 

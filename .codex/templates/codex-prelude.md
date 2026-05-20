@@ -96,52 +96,73 @@ Before writing any code:
 
 Implement what the TASK specifies. Follow the acceptance criteria exactly. Refer to `/docs/**` and `.codex/knowledge/**` for context — do not invent behavior.
 
+**If the Playwright extension is active** and the TASK has a `## Test scenarios` section:
+- Write or update `tests/[feature-name].spec.ts` covering every scenario listed.
+- One test per scenario, using the format: `"[scenario type]: [action] → [expected result]"`.
+- Use `.codex/extensions/playwright/test-file.template.spec.ts` as the starting structure.
+- The test file is part of the implementation — it goes in the **same commit** as the feature code.
+
 ### Post-implementation checks
 
 After implementation:
 1. Run `{{LINT_COMMAND}}`. If it fails, fix before continuing.
 2. Review your own diff: confirm no files outside the task scope were modified.
 
-### Automated test loop
+### Standard test loop
 
-After lint passes, run the tests:
+After lint passes, run the standard tests:
+
+```
+{{UNIT_TEST_COMMAND}}
+```
+
+<!-- {{UNIT_TEST_COMMAND}}: unit/integration tests only (e.g. npm test, pytest, go test ./...).
+     If the project has no unit tests separate from Playwright, leave blank or omit. -->
+
+**If all pass** → proceed to Playwright tests (if active) or Commit.
+
+**If one or more fail**, follow this diagnosis protocol:
+
+1. **Classify each failure:**
+   - Type A — assertion wrong in the test itself
+   - Type B — behavior wrong (code does not match what the test expects)
+   - Type C — timing/async issue
+   - Type D — regression from this task
+
+2. **Identify the exact cause.** Read the error message, the failing assertion, and your diff.
+3. **Apply a surgical fix** — change only the specific line(s) causing the failure.
+4. **Re-run.** If still failing after one attempt → stop. Report in RESIDUAL ISSUES.
+
+### Playwright test loop (if extension active)
+
+After standard tests pass, run Playwright:
 
 ```
 {{TEST_COMMAND}}
 ```
 
-**If all tests pass** → proceed to Commit.
+**If all Playwright tests pass** → proceed to Commit.
 
-**If one or more tests fail**, follow this diagnosis protocol before touching any code:
+**If one or more fail**, apply the same A/B/C/D diagnosis:
 
-1. **Classify each failure:**
-   - Type A — selector/assertion wrong in the test itself (test is the bug, not the code)
-   - Type B — behavior wrong (code does not match what the test expects)
-   - Type C — timing/async issue (timeout, "element not found" on elements that exist)
-   - Type D — regression from this task (test that previously passed now fails)
+- **Type A** — selector wrong in the `.spec.ts` you just wrote → fix the test selector.
+- **Type B** — UI behavior wrong → fix the application code.
+- **Type C** — timing/async → replace `sleep()` with `waitForSelector()` / `waitForResponse()`.
+- **Type D** — regression → fix the application code; do not touch unrelated tests.
 
-2. **Identify the exact cause** in the code you just wrote. Read the error message, the failing assertion, and your diff.
+**Never modify existing `.spec.ts` files to make them pass** — fix the application code instead. The only exceptions:
+- The `.spec.ts` was written by you in this task and has a selector/assertion error (Type A).
+- The TASK explicitly says to update tests.
 
-3. **Apply a surgical fix** — change only the specific line(s) causing the failure. Do not refactor unrelated code.
-
-4. **Re-run the tests** after fixing.
-
-5. **If tests still fail after one fix attempt** → stop. Report in RESIDUAL ISSUES:
-   - Which test(s) failed
-   - Failure type (A/B/C/D)
-   - Exact cause identified
-   - What you tried
-   - What is still blocking
-
-**Tests are ground truth.** Never modify test files to make them pass — fix the application code instead. The only exception: if the TASK explicitly says to update tests.
+If tests still fail after one fix attempt → stop. Report in RESIDUAL ISSUES with failure type, exact cause, and what was tried.
 
 ### Commit
 
-After lint AND tests pass, **commit all created and modified files** to the current branch before reporting. Use a single commit with message format:
+After lint AND all tests (standard + Playwright) pass, **commit all created and modified files** in a single commit:
 ```
 feat(block-N): TASK-NNN <short description>
 ```
-Do not skip the commit — the task is not complete until the work is committed.
+Include feature code, test files, and any updated docs in the same commit. Do not skip — the task is not complete until committed.
 
 ### Execution log
 
@@ -152,14 +173,23 @@ As the **final step**, append the following section to the TASK file (`.codex/ta
 
 **Phase 0 verdict:** OK | FINE_TUNING | RED_FLAG
 **Phase 0.5 findings:** <discrepancies or "none">
-**Files changed:**
-- `path/to/file.ts` — <what changed>
 
-**Commands run:**
-- `{{LINT_COMMAND}}` → <result>
-- `{{TEST_COMMAND}}` → <result>
+### What was implemented
+- <file> — <detailed description of what changed and why>
+- <file> — <detailed description>
 
-**Residual issues:** <list or "none">
+### Standard tests
+- `{{LINT_COMMAND}}` → PASS / FAIL
+- `{{UNIT_TEST_COMMAND}}` → N passed, M failed (or "not configured")
+- Fix attempts: <number> | <what was fixed, or "none needed">
+
+### Playwright tests
+<!-- Remove this section if Playwright extension is not active -->
+- `tests/[feature-name].spec.ts` → N passed, M failed
+- [test name] → PASS / FAIL
+- Fix attempts: <number> | <what was fixed, or "none needed">
+
+**Residual issues:** <list with failure type A/B/C/D, cause, what was tried — or "none">
 **Assumptions made:** <list or "none">
 ```
 
@@ -173,13 +203,20 @@ Return a structured summary in this format:
 TASK: TASK-NNN — <title>
 STATUS: COMPLETE | PARTIAL | BLOCKED
 
-FILES CHANGED:
-- path/to/file — description of change
+WHAT WAS IMPLEMENTED:
+- path/to/file — detailed description of what changed and why
+- tests/feature.spec.ts — N Playwright tests written covering: [scenario names]
 
-COMMANDS RUN:
+STANDARD TESTS:
 - {{LINT_COMMAND}} → PASS / FAIL
-- {{TEST_COMMAND}} → N passed, M failed | (list failed tests if any)
-- Fix attempts: <number> | <what was fixed, or "none needed">
+- {{UNIT_TEST_COMMAND}} → N passed, M failed (or "not configured")
+- Fix attempts: <number>
+
+PLAYWRIGHT TESTS:
+- tests/feature.spec.ts → N passed, M failed
+- [failing test name] → FAIL: [exact error]
+- Fix attempts: <number> | <what was fixed>
+(Remove this section if Playwright is not active)
 
 RESIDUAL ISSUES:
 - <issue with failure type A/B/C/D, cause, what was tried> or none
@@ -187,5 +224,5 @@ RESIDUAL ISSUES:
 ASSUMPTIONS:
 - <assumption> or none
 
-NEXT: <what Claude should do — e.g. "all tests green, review diff and approve Gate 2" | "2 tests still failing after fix, see RESIDUAL ISSUES">
+NEXT: <what Claude should do — e.g. "all tests green, review diff and approve Gate 2" | "2 Playwright tests still failing, see RESIDUAL ISSUES">
 ```
