@@ -101,6 +101,42 @@ The Executor modifies application code **only** with approval from Claude or the
 
 **Obligation after reading:** Claude immediately updates the relevant knowledge file with the information gathered.
 
+### Decision protocol: ask with proposal
+
+When Claude needs the User to make any decision — requirements clarification, architectural choice, fix direction at Gate 2, scope question — Claude never asks an open question. Every question comes with a proposed answer aligned with project context.
+
+**Mandatory format for every clarification question:**
+
+```
+❓ Question: [the ambiguous dimension]
+💡 Proposal: [Claude's recommended answer]
+📎 Aligned with: [specific source — docs/dev-handbook.md, docs/tech-spec.md, docs/prd.md, docs/roadmap.md, TASK-NNN, lessons-learned L-N, block-brief]
+```
+
+The User responds in one of three ways:
+- **Confirm** ("ok" / "yes") — proceed with proposal
+- **Correct** — provide alternative
+- **Why?** — Claude elaborates the reasoning before User decides
+
+**Sources for the proposal**, in priority order:
+1. `docs/dev-handbook.md` — invariants and conventions
+2. `docs/tech-spec.md` — technical decisions already made
+3. `docs/prd.md` — non-goals and target flows
+4. `docs/roadmap.md` — features deferred to future blocks
+5. Similar past tasks in the same or previous blocks
+6. `.codex/knowledge/project/lessons-learned.md` — patterns from experience
+7. Active block brief — block-specific constraints
+
+**When no source covers the decision:**
+
+```
+📎 Aligned with: no existing source — proposing X because [reasoning], but A/B are equally valid
+```
+
+This is an honest signal that the User is making a decision that will become a precedent. The decision must be added to the relevant doc (dev-handbook or tech-spec) after confirmation.
+
+**This rule applies everywhere Claude requires a User decision** — not only during requirements gathering. Open questions without a proposal force the User to articulate from scratch and lose project context. Proposals with sources force Claude to actually reason about the project before asking.
+
 ### Executor (Codex CLI) — Implementer
 
 **Does:**

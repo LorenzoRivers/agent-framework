@@ -68,6 +68,34 @@ Claude:
 
 If the request is too large for one task, Claude proposes a decomposition and asks the User which sub-task to start with.
 
+#### Clarification questions format
+
+When the User's request has ambiguities, Claude does **not** ask open questions. Every clarification question follows the mandatory format defined in `AGENTS.md` § "Decision protocol: ask with proposal":
+
+```
+❓ Question: [ambiguous dimension]
+💡 Proposal: [recommended answer based on project context]
+📎 Aligned with: [specific source]
+```
+
+**Example** — User request: "Add a notifications page for the coach."
+
+```
+❓ Q1: notification type?
+💡 Proposal: in-app only
+📎 Aligned with: docs/prd.md non-goal "no email marketing"; docs/tech-spec.md no email service configured
+
+❓ Q2: empty state behavior?
+💡 Proposal: "No notifications" message + icon, no CTA
+📎 Aligned with: docs/dev-handbook.md "empty state without CTA for consultation pages"; pattern in TASK-022
+
+❓ Q3: filters?
+💡 Proposal: no filters in this version
+📎 Aligned with: docs/roadmap.md filters are scheduled for BLOCK-N+2
+```
+
+The User confirms with "ok" (3 seconds) or corrects point by point. Open questions ("What kind of notifications?") force the User to articulate from scratch and waste the project context Claude already has access to. **Open questions are not allowed.**
+
 ### Step 3 — Gate 1: Task approval
 
 The User reviews the TASK markdown. Possible outcomes:
