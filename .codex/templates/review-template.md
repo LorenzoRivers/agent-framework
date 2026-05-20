@@ -69,6 +69,23 @@
 
 ---
 
+## Quality dimensions check
+
+*Check only the dimensions activated in `codex-prelude.md`. Remove rows for inactive dimensions.*
+
+| Dimension | Status | Notes |
+|---|---|---|
+| **Security baseline** | ✅ / ❌ / N/A | No hardcoded secrets, no PII in logs, input validated, ownership verified |
+| **Error handling** | ✅ / ❌ / N/A | try/catch in async handlers, generic error messages to client, finally for cleanup |
+| **Naming conventions** | ✅ / ❌ / N/A | Matches `docs/dev-handbook.md` naming rules |
+| **Logging** | ✅ / ❌ / N/A | Correct levels, feature prefix, no PII, no console.log in production paths |
+| **Accessibility** | ✅ / ❌ / N/A | Labels, alt text, keyboard nav, no color-only information |
+| **API conventions** | ✅ / ❌ / N/A | Response format, correct status codes, no 200 with error body |
+
+**Quality violations found:** [list any, or "none"]
+
+---
+
 ## Architectural concerns
 
 [Does the implementation introduce patterns that conflict with the architecture defined in `/docs/tech-spec.md`? If none, write "None."]

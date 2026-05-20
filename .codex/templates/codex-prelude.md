@@ -24,14 +24,74 @@ Read this file **before** reading the TASK file. These rules apply to every task
 
 ---
 
-## Standing rules
+## Quality dimensions
 
-<!-- {{STANDING_UI_RULES}}: add project-specific standing rules here. Examples:
+These rules apply to every task in addition to the acceptance criteria.
+They are derived from `docs/dev-handbook.md` — that document is the authoritative source.
+Activate the dimensions relevant to your project by uncommenting them below.
+
+<!-- HOW TO ACTIVATE: remove the HTML comment markers around each dimension you want active.
+     Inactive dimensions are skipped by the Executor and not checked at Gate 2.
+     Rule of thumb: activate Security and Error handling for every project. -->
+
+<!--
+### Security baseline (recommended: always active)
+- Never hardcode secrets, API keys, or tokens in application code — use environment variables
+- Never log passwords, tokens, full auth headers, or PII (email, name, phone) at any log level
+- Validate and sanitize all user-supplied input before using it in DB queries, file paths, or shell commands
+- Every route that returns data scoped to a user must verify the authenticated user owns that data
+- Never expose internal error details, stack traces, or file paths to API responses in production
+-->
+
+<!--
+### Error handling (recommended: always active)
+Follow the error handling standard in `docs/dev-handbook.md`:
+- Every async route handler must have a try/catch
+- Errors are logged to console.error with a feature-name prefix before sending the response
+- User-facing error messages are generic in production — never expose implementation details
+- Loading/pending states are reset in finally blocks, not in catch blocks
+-->
+
+<!--
+### Naming conventions (recommended: always active)
+Follow the naming conventions in `docs/dev-handbook.md` exactly.
+Flag any deviation from the convention as a FINE_TUNING deviation in the execution log.
+-->
+
+<!--
+### Logging (activate for projects with operational logs)
+Follow the logging conventions in `docs/dev-handbook.md`:
+- Use the correct log level (error / warn / log)
+- Always prefix with "[FeatureName]"
+- Never log PII or secrets
+- Remove console.log before merging to main (console.error only in production)
+-->
+
+<!--
+### Accessibility baseline (activate for projects with public-facing UI)
+- Every interactive element (button, link, input) must have a visible label or aria-label
+- Images must have descriptive alt text (or alt="" if purely decorative)
+- Color must not be the only means of conveying information (use icons or text as well)
+- All interactive elements must be reachable and operable via keyboard (Tab + Enter/Space)
+- Form error messages must be associated with their field (aria-describedby or visible proximity)
+-->
+
+<!--
+### API conventions (activate for projects with a REST API)
+Follow the API conventions in `docs/dev-handbook.md`:
+- Response format: success → direct data or array; error → { error: "message" }
+- HTTP status codes: use 400 for bad request, 401 for unauth, 403 for forbidden, 404 for not found, 500 for server error
+- Never return 200 with an error in the body
+-->
+
+## Standing UI rules
+
+<!-- {{STANDING_UI_RULES}}: add project-specific UI rules here. Examples:
      - Date inputs must auto-format as the user types and validate format (not just non-empty)
      - Form validation must show inline errors per field after first submit attempt
      - All screens must use safe area insets and keyboard avoidance where appropriate
      - Font rendering must be verified on all target platforms
-     Remove this comment block if no standing rules apply.
+     Remove this comment block if no standing UI rules apply.
 -->
 
 ---
