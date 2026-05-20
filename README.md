@@ -4,6 +4,9 @@ A battle-tested multi-agent workflow framework for software product development.
 
 **Core idea:** Claude Code plans and reviews. A code-execution agent (Codex CLI or similar) implements. A runtime (Replit, Vercel, etc.) runs the result. The User decides. Each actor has a strict role, a permissions boundary, and a structured contract.
 
+**→ [QUICKSTART.md](QUICKSTART.md) — first task in 30 minutes**
+**→ [SETUP.md](SETUP.md) — full configuration reference**
+
 ---
 
 ## What's included

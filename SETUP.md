@@ -162,7 +162,31 @@ From this point, every task that has a `## Test scenarios` section will produce 
 
 ---
 
-## 8. Choose additional extensions (optional)
+## 8. Activate quality dimensions
+
+Open `.codex/templates/codex-prelude.md` and find the `## Quality dimensions` section. Each dimension is a commented block — uncomment the ones relevant to your project.
+
+**Minimum for any web project — uncomment both:**
+- `Security baseline` — no hardcoded secrets, no PII in logs, input validation, ownership checks
+- `Error handling` — try/catch in handlers, generic error messages to client, finally for cleanup
+
+**Add for public-facing UI:**
+- `Accessibility baseline` — ARIA labels, alt text, keyboard nav, no color-only information
+
+**Add for projects with a REST API:**
+- `API conventions` — response format, correct HTTP status codes
+
+**Add if naming consistency matters (recommended):**
+- `Naming conventions` — references `docs/dev-handbook.md` naming rules
+
+**Add if operational logs are important:**
+- `Logging` — correct levels, feature prefix, no PII, no console.log in production
+
+After uncommenting, verify `docs/dev-handbook.md` has the corresponding rules filled in — the dimensions reference it as the authoritative source.
+
+---
+
+## 9. Choose additional extensions (optional)
 
 Review `.codex/extensions/README.md` to decide which advanced agentic patterns to activate.
 
@@ -177,7 +201,7 @@ To activate an extension, add the relevant policy section to `.codex/AGENTS.md` 
 
 ---
 
-## 9. Verify the setup
+## 10. Verify the setup
 
 Before starting your first task, verify:
 
@@ -186,8 +210,11 @@ Before starting your first task, verify:
 - [ ] `session-handoff.md` reflects the initial project state
 - [ ] Git is initialized with `main`, `dev`, and `block/BLOCK-1-*` branches
 - [ ] `.env.example` exists and lists all required variables
+- [ ] Quality dimensions activated in `codex-prelude.md` (at minimum: Security + Error handling)
 
 If `grep -r "{{" .codex/` returns results, you have unreplaced placeholders. Fix them before starting.
+
+For a more thorough verification: `.codex/checklists/setup-verification.md`.
 
 ---
 
