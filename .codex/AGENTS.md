@@ -13,15 +13,16 @@ Four actors collaborate on {{PROJECT_NAME}}:
 | Actor | Role | Writes code? |
 |---|---|---|
 | **User** | Decision-maker, product owner, final approver | No |
-| **Claude Code** | Planner, Architect, Reviewer | Only `.codex/**` and only when explicitly asked |
-| **Executor** (Codex CLI) | Implementer | Yes — application code, on dedicated task branches, with approval |
+| **Claude Code** | Planner, Architect, Reviewer, **Orchestrator of Codex CLI** | Only `.codex/**` and only when explicitly asked |
+| **Codex CLI** | Implementer — invoked by Claude via `{{CODEX_EXEC_COMMAND}}` | Yes — application code, on dedicated task branches, with approval |
 | **{{RUNTIME_PLATFORM}}** | Runtime, deployment, visual inspection | No (autonomous code edits forbidden) |
 
-<!-- {{RUNTIME_PLATFORM}}: e.g. Replit, Vercel, local Docker, Railway, Fly.io -->
+<!-- {{CODEX_EXEC_COMMAND}}: e.g. ~/bin/codex-ai exec, codex exec, npx codex -->
+<!-- {{RUNTIME_PLATFORM}}: e.g. Replit, Vercel, local Docker, Railway, Expo/EAS Build -->
 
-**Core principle:** Claude reasons about the system. The Executor works on the repository. The Runtime runs the result. The User decides.
+**Core principle:** Claude reasons about the system and orchestrates Codex CLI. The User talks only to Claude. Claude invokes Codex CLI via Bash (`{{CODEX_EXEC_COMMAND}}`). The User never runs Codex commands directly.
 
-If Claude and the Executor both reason about architecture and both write code, the system becomes incoherent. Stay in role.
+If Claude and Codex both reason about architecture and both write code, the system becomes incoherent. Stay in role.
 
 ---
 
@@ -64,6 +65,11 @@ The Executor modifies application code **only** with approval from Claude or the
 - Translate User intent into a concrete `TASK-NNN.md` using `templates/task-template.md`.
 - Decompose large work into small atomic tasks.
 - Define **behavioral requirements**, acceptance criteria, files in scope, constraints, "DO NOT BREAK" invariants.
+- Invoke Codex CLI via Bash (`{{CODEX_EXEC_COMMAND}}`) passing the TASK file as prompt after User approval (Gate 1).
+- Read Codex output and `git diff`; perform Gate 2 review.
+- Request fixes from Codex if needed (max 2 iterations); escalate to User if unresolved.
+- For **T1 tasks** (single file, ≤2 changes, zero regression risk): implement directly without invoking Codex.
+- For **T2 large / T3**: present Codex's Phase 1 plan to User before proceeding with implementation.
 - Review the Executor's diff for T2-large and T3 tasks using `templates/review-template.md`.
 - Flag risks, regressions, doc-vs-code mismatches.
 - Update `.codex/knowledge/**` to keep project state coherent.
@@ -109,11 +115,13 @@ The Executor modifies application code **only** with approval from Claude or the
 - Change `.codex/**` (the playbook is Claude/User territory).
 - Add dependencies without explicit task authorization.
 - Make architectural decisions — those belong to Claude.
-- {{INFRA_HARD_RULES}}
 <!-- {{INFRA_HARD_RULES}}: list project-specific forbidden operations, e.g.:
      - Run destructive DB operations (DROP, TRUNCATE, migrate reset) without explicit task authorization
      - Modify production secrets or environment files
      - Deploy to production without explicit User trigger
+     - Submit to App Store / TestFlight without explicit User approval
+     - Delete user data from persistent storage without explicit task authorization
+     - Add native platform modules without explicit task authorization
 -->
 
 ### {{RUNTIME_PLATFORM}} — Runtime

@@ -33,6 +33,24 @@
 
 ---
 
+## Test scenarios
+
+[**MANDATORY for every task that touches UI, forms, navigation, or business logic.**
+Write every scenario as `[exact input or action] → [exact expected output]`.
+Cover: happy path, empty/invalid input, edge cases, boundary values.
+If a scenario is missing here, the Executor must NOT assume the behavior — it must stop and report RED_FLAG.]
+
+**Happy path:**
+- [action] → [result]
+
+**Validation / error states:**
+- [invalid input] → [exact error message]
+
+**Edge cases:**
+- [boundary or unusual input] → [exact result]
+
+---
+
 ## Files in scope
 
 [List every file the Executor is expected to read or modify. Be explicit — this bounds the task.]
@@ -59,14 +77,15 @@
 
 ## Constraints
 
-[Project-specific rules that apply to this task. Copy from `{{PROJECT_CONSTRAINTS}}` as relevant.]
+[Project-specific rules that apply to this task. Copy the relevant subset from `{{PROJECT_CONSTRAINTS}}` in SETUP.md.]
 
-<!-- {{PROJECT_CONSTRAINTS}}: fill this in SETUP.md and paste the relevant subset here for each task.
+<!-- {{PROJECT_CONSTRAINTS}}: fill in SETUP.md and paste the relevant subset here for each task.
      Examples:
      - No destructive DB operations without explicit authorization
      - Do not modify .env* files
-     - Dependencies must be explicitly authorized
+     - Dependencies must be explicitly authorized in the task
      - Do not deploy to production without User trigger
+     - Every form with user input must specify validation rules, error messages, and real-time error clearing
 -->
 
 - [Constraint 1]

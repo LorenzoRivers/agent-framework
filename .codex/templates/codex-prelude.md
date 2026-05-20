@@ -1,13 +1,38 @@
 # Executor Prelude — Rules for every task
 
+## How you were invoked
+
+You were launched by **Claude Code** via `{{CODEX_EXEC_COMMAND}}` in non-interactive mode. Do not interact with the User directly — all your output returns to Claude, who processes it and decides whether to present it to the User or request corrections.
+
+- Follow the assigned TASK exactly.
+- For T2 large / T3, if the TASK says "Phase 1 only": write the plan in `.codex/tasks/TASK-NNN-plan.md` and **stop without modifying any application file**. Wait for Claude to re-invoke with "Phase 1 approved, proceed."
+- If asked to "proceed" or "fix": read the original TASK + Claude's feedback, implement only the requested correction.
+
+---
+
 Read this file **before** reading the TASK file. These rules apply to every task you execute, regardless of tier or content.
 
 > **Project-specific configuration:**
-> - Playbook root: `{{PLAYBOOK_ROOT}}` (default: `.codex`)
-> - Lint command: `{{LINT_COMMAND}}`
-> - Test command: `{{TEST_COMMAND}}`
-> - Wiki command: `{{WIKI_COMMAND}}` (optional — leave blank if not applicable)
-> - App code paths: `{{APP_CODE_PATHS}}`
+> - Playbook root: `.codex`
+> - Lint/test working directory: `{{LINT_TEST_DIR}}` (e.g. repo root, or a subdirectory if the project has nested packages)
+> - Lint command: `{{LINT_COMMAND}}` (e.g. npm run check, npm run lint, make lint, ruff check)
+> - Test command: `{{TEST_COMMAND}}` (e.g. npm test, pytest, go test ./..., npx playwright test)
+> - Wiki command: `{{WIKI_COMMAND}}` (omit if no wiki generator exists)
+> - App code paths: `{{APP_CODE_PATHS}}` (e.g. src/, app/, server/, client/)
+
+<!-- Replace all {{PLACEHOLDERS}} in SETUP.md before using this template -->
+
+---
+
+## Standing rules
+
+<!-- {{STANDING_UI_RULES}}: add project-specific standing rules here. Examples:
+     - Date inputs must auto-format as the user types and validate format (not just non-empty)
+     - Form validation must show inline errors per field after first submit attempt
+     - All screens must use safe area insets and keyboard avoidance where appropriate
+     - Font rendering must be verified on all target platforms
+     Remove this comment block if no standing rules apply.
+-->
 
 ---
 
@@ -15,13 +40,18 @@ Read this file **before** reading the TASK file. These rules apply to every task
 
 1. **Branch discipline:** work only on `task/TASK-NNN-slug`. Never commit to `block/*`, `dev`, or `main`.
 2. **Scope discipline:** implement exactly what the TASK specifies. No unrequested refactors, no scope creep, no "while I'm here" changes.
-3. **No playbook edits:** do not modify `{{PLAYBOOK_ROOT}}/**` except to append the `## Executor execution log` section to the TASK file at the end of execution.
+3. **No playbook edits:** do not modify `.codex/**` except to append the `## Executor execution log` section to the TASK file at the end of execution.
 4. **No secrets:** never read, write, log, or commit `.env*` files. The runtime loads them automatically.
 5. **No dependency additions** without explicit task authorization.
 6. **No architectural decisions** — those belong to Claude Code.
-7. **{{INFRA_HARD_RULES}}**
-<!-- {{INFRA_HARD_RULES}}: project-specific forbidden operations (e.g. no destructive DB ops, no prod deploys without trigger).
-     Remove this line if no infra-specific rules apply. -->
+<!-- {{INFRA_HARD_RULES}}: add project-specific forbidden operations. Examples:
+     - Never run destructive DB operations (DROP, TRUNCATE, migrate reset) without explicit task authorization
+     - Never deploy to production without explicit User trigger
+     - Never submit to App Store / TestFlight without explicit User approval
+     - Never delete user data from persistent storage without explicit task authorization
+     - Never add native platform modules without explicit task authorization
+     Remove this comment block if no infra-specific rules apply.
+-->
 
 ---
 
@@ -69,10 +99,49 @@ Implement what the TASK specifies. Follow the acceptance criteria exactly. Refer
 ### Post-implementation checks
 
 After implementation:
-1. Run `{{LINT_COMMAND}}`.
-2. Run `{{TEST_COMMAND}}`.
-3. If either fails, fix the issue before reporting. If you cannot fix it, report it as a residual issue.
-4. Review your own diff: confirm no files outside the task scope were modified.
+1. Run `{{LINT_COMMAND}}`. If it fails, fix before continuing.
+2. Review your own diff: confirm no files outside the task scope were modified.
+
+### Automated test loop
+
+After lint passes, run the tests:
+
+```
+{{TEST_COMMAND}}
+```
+
+**If all tests pass** → proceed to Commit.
+
+**If one or more tests fail**, follow this diagnosis protocol before touching any code:
+
+1. **Classify each failure:**
+   - Type A — selector/assertion wrong in the test itself (test is the bug, not the code)
+   - Type B — behavior wrong (code does not match what the test expects)
+   - Type C — timing/async issue (timeout, "element not found" on elements that exist)
+   - Type D — regression from this task (test that previously passed now fails)
+
+2. **Identify the exact cause** in the code you just wrote. Read the error message, the failing assertion, and your diff.
+
+3. **Apply a surgical fix** — change only the specific line(s) causing the failure. Do not refactor unrelated code.
+
+4. **Re-run the tests** after fixing.
+
+5. **If tests still fail after one fix attempt** → stop. Report in RESIDUAL ISSUES:
+   - Which test(s) failed
+   - Failure type (A/B/C/D)
+   - Exact cause identified
+   - What you tried
+   - What is still blocking
+
+**Tests are ground truth.** Never modify test files to make them pass — fix the application code instead. The only exception: if the TASK explicitly says to update tests.
+
+### Commit
+
+After lint AND tests pass, **commit all created and modified files** to the current branch before reporting. Use a single commit with message format:
+```
+feat(block-N): TASK-NNN <short description>
+```
+Do not skip the commit — the task is not complete until the work is committed.
 
 ### Execution log
 
@@ -108,14 +177,15 @@ FILES CHANGED:
 - path/to/file — description of change
 
 COMMANDS RUN:
-- {{LINT_COMMAND}} → PASS / FAIL (details)
-- {{TEST_COMMAND}} → PASS / FAIL (details)
+- {{LINT_COMMAND}} → PASS / FAIL
+- {{TEST_COMMAND}} → N passed, M failed | (list failed tests if any)
+- Fix attempts: <number> | <what was fixed, or "none needed">
 
 RESIDUAL ISSUES:
-- <issue> or none
+- <issue with failure type A/B/C/D, cause, what was tried> or none
 
 ASSUMPTIONS:
 - <assumption> or none
 
-NEXT: <what the User should do — e.g. "review diff and approve Gate 2">
+NEXT: <what Claude should do — e.g. "all tests green, review diff and approve Gate 2" | "2 tests still failing after fix, see RESIDUAL ISSUES">
 ```

@@ -7,7 +7,7 @@ This is the canonical loop for every task. Roles and rules are defined in [`AGEN
 ## The 7-step loop
 
 ```
-User                 Claude              Executor            Runtime
+User                 Claude              Codex CLI           Runtime
  │                     │                   │                    │
  │  0. session start   │                   │                    │
  │  (reads handoff +   │                   │                    │
@@ -18,16 +18,15 @@ User                 Claude              Executor            Runtime
  │                     │  2. produce TASK  │                    │
  │<────────────────────┤                   │                    │
  │  3. Gate 1: approve │                   │                    │
- ├──────────────────────────────────────── │                    │
- │  4. pass TASK to Executor               │                    │
- ├────────────────────────────────────────>│                    │
+ ├────────────────────>│                   │                    │
+ │                     │  4. codex exec    │                    │
+ │                     ├──────────────────>│                    │
  │                     │                   │  implement on      │
  │                     │                   │  task/TASK-NNN-... │
- │  5. Executor returns diff + summary     │                    │
- │<────────────────────────────────────────┤                    │
- │  6. Gate 2: validate (tier-dependent)   │                    │
- ├── T2large/T3 ──────>│  produce REVIEW   │                    │
- │<────────────────────┤                   │                    │
+ │                     │  5. output + diff │                    │
+ │                     │<──────────────────┤                    │
+ │                     │  6. Gate 2        │                    │
+ │<────────────────────┤  (review/fix)     │                    │
  │  on approve: merge task/* → block/BLOCK-N                    │
  │  (repeat steps 1-6 for each task in the block)               │
  │                                                              │
@@ -38,6 +37,8 @@ User                 Claude              Executor            Runtime
  │  on User approval: merge block/BLOCK-N → dev                 │
  │  (merge dev → main on explicit User decision later)          │
 ```
+
+> **Core principle:** the User talks only to Claude. Claude is the sole intermediary between the User and Codex CLI. The User never runs Codex commands directly.
 
 ---
 
@@ -71,47 +72,68 @@ If the request is too large for one task, Claude proposes a decomposition and as
 
 The User reviews the TASK markdown. Possible outcomes:
 - **Approved** → go to Step 4.
-- **Approved with changes** → User edits the TASK directly or asks Claude to revise.
+- **Approved with changes** → User asks Claude to revise the TASK.
 - **Rejected** → discard or rescope.
 
-For trivial tasks, the User can skip the markdown step and ask Claude to produce a short inline prompt directly (T1 format). The principle is: explicit approval before the Executor touches anything.
+For trivial tasks (T1), the User can approve a short inline prompt directly in chat. The principle is: explicit approval before Codex CLI touches anything.
 
-### Step 4 — User passes TASK to Executor
+### Step 4 — Claude invokes Codex CLI
 
-The Executor's first action is to:
-1. Read `.codex/AGENTS.md`, `.codex/templates/codex-prelude.md`, and `.codex/tasks/TASK-NNN-*.md`.
-2. Run **Phase 0 — Plan review**. Output verdict: `OK`, `FINE_TUNING`, or `RED_FLAG`.
-   - `RED_FLAG` → Executor stops, no file touched. User resolves and re-submits.
-   - `OK` / `FINE_TUNING` → proceed.
-3. Run **Phase 0.5 — Current state verification**. Reads actual files; identifies fine-tuning or blockers.
+After Gate 1 approval, Claude invokes Codex CLI non-interactively via Bash:
+
+```bash
+{{CODEX_EXEC_COMMAND}} \
+  -C "<project_root>" \
+  -s danger-full-access \
+  --output-last-message /tmp/codex_out.md \
+  "$(cat .codex/tasks/TASK-NNN-slug.md)"
+```
+
+<!-- {{CODEX_EXEC_COMMAND}}: e.g. ~/bin/codex-ai exec, codex exec -->
+<!-- Note: use -s danger-full-access (not workspace-write) — workspace-write blocks writes to .codex/tasks/, git, and npm -->
+<!-- Note: pre-create the branch before invoking: git checkout -b task/TASK-NNN-slug block/BLOCK-N-slug -->
+
+Codex CLI executes these phases autonomously:
+1. Reads `.codex/AGENTS.md`, `.codex/templates/codex-prelude.md`, and the TASK file.
+2. **Phase 0 — Plan review.** Verdict: `OK`, `FINE_TUNING`, or `RED_FLAG`.
+   - `RED_FLAG` → Codex stops without touching anything. Claude reports the issue to the User.
+   - `OK` / `FINE_TUNING` → proceeds.
+3. **Phase 0.5 — Current state verification.** Verifies the current code state matches the TASK description.
 4. **T2 large / T3 only — Phase 1: Implementation plan.**
-   Executor writes a concrete plan and **stops**. No branch created yet, no file touched.
-   - User reviews. `APPROVED` → Executor creates branch and proceeds.
-   - T1 / T2 small / T2 medium: skip Phase 1 — create branch and proceed directly.
-5. Create branch `task/TASK-NNN-slug` from **`block/BLOCK-N-slug`** (not from `dev`). If the block branch doesn't exist yet, create it from `dev` first.
-6. Implement only what the task specifies.
-7. Append `## Executor execution log` to the task file as the last step before returning output.
+   Codex writes the plan in `.codex/tasks/TASK-NNN-plan.md` and **stops** without creating the branch or touching application files.
+   Claude reads the plan and presents it to the User. If approved, Claude re-invokes `codex exec` with explicit instruction "Phase 1 approved, proceed with implementation."
+   - T1 / T2 small / T2 medium: no Phase 1 — Codex creates the branch and proceeds directly.
+5. Creates branch `task/TASK-NNN-slug` from **`block/BLOCK-N-slug`**.
+6. Implements exactly what the task specifies.
+7. Appends `## Executor execution log` to the TASK file as the final step.
 
-### Step 5 — Executor returns output
+### Step 5 — Codex CLI returns output to Claude
 
-Executor commits to its branch and returns a structured summary (see `templates/codex-prelude.md`):
-- Files changed
-- Modifications made
-- Tests/commands run + results
-- Residual issues
-- Assumptions
+Codex CLI runs the internal loop (lint + tests + fix if needed) before committing. It writes structured output to `/tmp/codex_out.md`. Claude reads the file and the `git diff` of the branch.
 
-### Step 6 — Gate 2: validation (tier-dependent)
+**If Codex auto-corrected failures during the loop:** Claude reads the test report, verifies all pass, then examines the cumulative diff (implementation + fixes).
+
+**If Codex reports tests still failing (RESIDUAL ISSUES):** Claude applies the "Try to Fix" diagnosis:
+
+1. **Classify each failure** (Type A/B/C/D — see codex-prelude.md)
+2. **Build a surgical prompt** for Codex that specifies: exact file, line, cause, fix to apply
+3. **Re-invoke Codex** with "Fix: [precise description]" — not "retry"
+4. If tests pass after the fix → normal Gate 2
+5. If tests still fail → Claude reports to the User with full diagnosis + options
+
+Max 2 "Try to Fix" iterations from Claude. On the third failure, it is the User's decision.
+
+### Step 6 — Gate 2: validation (test-first)
+
+**Mandatory prerequisite:** all tests must be green before Claude approves the diff.
 
 | Task tier | Who validates | Format |
 |---|---|---|
-| **T1 inline** | Executor self-validates (`{{LINT_COMMAND}}` + acceptance checklist) | 5-field checklist in Executor output |
-| **T2 small/medium** | Executor self-validates | Same; Claude reviews only if Executor flags issues |
-| **T2 large / T3** | Claude reviews the diff | `REVIEW-NNN.md` using `templates/review-template.md` |
-| **Any** (runtime required) | Runtime runs verification matrix | Only when tests need live environment |
-| **Executor fails ×2** | Runtime implements with Executor diagnosis | Escalation path, not default |
-
-For T2 large / T3: the User passes the diff to Claude. Claude compares against acceptance criteria and produces `REVIEW-NNN.md`. Verdict: **approved** / **approved with fixes** / **rework**.
+| **T1 inline** | Claude checks: lint + tests + diff | Approval in chat |
+| **T2 small/medium** | Claude reads: test report + diff from Codex | Approval in chat |
+| **T2 large / T3** | Claude: test report + diff + formal review | `REVIEW-NNN.md` |
+| **Tests failed after internal loop** | Claude → targeted "Try to Fix" (max 2×) | Surgical fix in prompt |
+| **Still failing after 2 Try to Fix** | Claude reports to User | Full diagnosis + options |
 
 ### Step 7 — Merge
 
@@ -125,8 +147,8 @@ After every merge, Claude **proposes deleting the merged branch** (both local an
 ### After Gate 2 (task merged to block branch)
 
 - Branch `task/TASK-NNN-slug` is merged to `block/BLOCK-N-slug`.
-- **Optional wiki refresh:** if the project has a `{{WIKI_COMMAND}}`, run it to regenerate the codebase wiki before pushing.
-<!-- {{WIKI_COMMAND}}: e.g. npm run wiki, make wiki, python scripts/gen-wiki.py — leave blank if not applicable -->
+- **Optional wiki refresh:** if the project has a wiki generator, run `{{WIKI_COMMAND}}` to regenerate the codebase wiki before pushing.
+<!-- {{WIKI_COMMAND}}: e.g. npm run wiki, make wiki, python scripts/gen-wiki.py — omit this step if no wiki generator exists -->
 - **Git sync:** immediately push `block/BLOCK-N-slug` — local and remote must never diverge.
 - Claude proposes deleting `task/TASK-NNN-slug` locally and on the remote — deletion only after User approval.
 - The TASK markdown stays in `.codex/tasks/` as historical record.
