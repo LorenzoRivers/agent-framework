@@ -43,15 +43,29 @@ A battle-tested multi-agent workflow framework for software product development.
 
 ## Agentic patterns implemented
 
+### Core workflow
+
 | Pattern | Where |
 |---|---|
-| **Orchestrator → Subagent** | Claude writes TASK specs; Executor implements |
+| **Orchestrator → Subagent** | Claude writes TASK specs; invokes Codex CLI via bash; Executor implements |
 | **Plan → Verify → Execute** | Gate 1 (task approval) + Phase 0.5 (state verification) before any code |
-| **Reflection / Review loop** | Gate 2: Executor self-reviews (T1/T2) or Claude reviews (T2-large/T3) |
-| **Memory / Knowledge persistence** | `session-handoff.md`, block briefs, `codebase-wiki.md` |
-| **Parallel agents** *(optional)* | `.codex/extensions/parallel-agents/` |
-| **Domain routing** *(optional)* | `.codex/extensions/routing/` |
-| **Self-eval loop** *(optional)* | `.codex/extensions/self-eval-loop/` |
+| **Requirements disambiguation** | Paraphrase + typed checklist + test scenarios preview before every TASK |
+| **Ask with proposal** | Every clarification question comes with a recommended answer citing project source |
+| **Reflection / Review loop** | Gate 2: scope check + quality check + Executor self-validates (T1/T2) or Claude reviews (T2-large/T3) |
+| **Scope enforcement** | `Files in scope → Create` list gates every new file/class/module; violations flagged in execution log |
+| **Quality dimensions** | 6 opt-in dimensions (security, error handling, accessibility, logging, naming, API conventions) applied per task |
+| **Memory / Knowledge persistence** | `session-handoff.md`, block briefs, `lessons-learned.md`, `codebase-wiki.md` |
+| **Event-driven self-improvement** | Lessons captured immediately on FINE_TUNING / fix attempts / RED_FLAG — not deferred to block end |
+| **Framework-worthy filter** | At Gate 3: one question per block — "does any lesson apply to any project?" Propagates to framework on explicit approval |
+
+### Optional extensions
+
+| Extension | Pattern | When |
+|---|---|---|
+| **`playwright/`** | Codex writes + runs E2E browser tests per task | Any project with browser UI |
+| **`parallel-agents/`** | Fan-out independent tasks, fan-in reviews | Tasks with no inter-dependencies |
+| **`routing/`** | Domain-based agent routing (DB, UI, API) | Projects with clearly separated domains |
+| **`self-eval-loop/`** | Executor self-retries against objective criteria | Tasks with fully measurable acceptance criteria |
 
 ---
 
@@ -125,4 +139,16 @@ INFRA_HARD_RULES:
 
 ## Origin
 
-Extracted from the Coachable project (a real production multi-agent codebase built with Claude Code + Codex CLI + Replit). The workflow ran through 11 development blocks covering ~46 tasks, with zero unintended production incidents during the agentic phase.
+Extracted from the **Coachable** project — a real production SaaS built entirely with a multi-agent workflow (Claude Code + Codex CLI + Replit). The project shipped 12 development blocks covering ~47 tasks, from auth and data model through AI features, security hardening, and production deployment, with zero unintended production incidents during the agentic phase.
+
+The framework was then systematically improved through 5 refinement blocks based on a gap analysis against the goal of "building any web/mobile app via agents, without reading code, without copy-pasting between agents, with the highest possible code quality":
+
+| Refinement block | What was added |
+|---|---|
+| **A — Project kickoff** | `docs/templates/` (PRD, tech-spec, roadmap, dev-handbook), block brief template |
+| **B — Code quality** | 6 opt-in quality dimensions (security, accessibility, error handling, logging, naming, API) |
+| **C — Decision protocol** | "Ask with proposal" pattern — no open questions, every clarification comes with a recommended answer cited from project sources |
+| **D — Requirements gathering** | Paraphrase confirmation, disambiguation checklists by request type, test scenarios preview, assumptions log in TASK |
+| **E — Onboarding polish** | QUICKSTART.md (30-min path), quality dimension activation guide, failure-paths reference, setup verification checklist |
+
+The framework is continuously updated as new patterns emerge from real project use.
