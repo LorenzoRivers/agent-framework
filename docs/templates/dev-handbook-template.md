@@ -164,6 +164,34 @@ Pagination: { data: [...], total: N, page: N, pageSize: N } — only for list en
 
 ---
 
+## Accessibility conventions
+
+*Remove this section if the project has no public-facing UI.*
+
+```
+Interactive elements: every button, link, and input must have a visible label or aria-label
+Images: decorative images use alt="" — meaningful images have a descriptive alt text
+Color: never use color as the only means of conveying information (always pair with text or icon)
+Keyboard: all interactive elements reachable via Tab; activated via Enter or Space
+Forms: error messages associated with their input (aria-describedby or visible proximity)
+Focus: focus ring must be visible — never use outline: none without a custom visible alternative
+```
+
+---
+
+## Security conventions
+
+```
+Secrets: never hardcode API keys, tokens, or passwords in application code — use environment variables
+Logging: never log passwords, tokens, full auth headers, or PII (email, name, phone) at any level
+Input validation: validate and sanitize all user-supplied input before DB queries, file paths, or shell commands
+Ownership: every route returning user-scoped data must verify the authenticated user owns that data
+Error exposure: never expose stack traces, file paths, or internal error details to API responses in production
+SQL: always use parameterized queries or ORM — never string-interpolate user input into queries
+```
+
+---
+
 ## Test conventions
 
 ```
