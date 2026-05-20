@@ -21,6 +21,15 @@
 - [ ] Phase 0 verdict is documented
 - [ ] Commands run and results are documented
 - [ ] Residual issues are documented (or "none")
+- [ ] Lesson candidates field is present (even if "none")
+
+## Scope check
+
+- [ ] Every new file in the diff appears in the TASK's `Files in scope → Create` list
+- [ ] Every new class or module not in the `Create` list has an explicit justification in `NEW CONSTRUCTS INTRODUCED`
+- [ ] No files outside `Files in scope` were modified
+
+**Unlisted constructs found:** [list any, or "none"]
 
 ---
 
@@ -75,3 +84,7 @@
 ## Notes for future tasks
 
 [Any information the Executor or Claude will need in subsequent tasks in this block. Update the block brief after this review.]
+
+## Lesson candidates
+
+[Any pattern from this task worth capturing in lessons-learned.md — FINE_TUNING deviations, unexpected scope issues, test failures that revealed a recurring problem. Write "none" if execution was clean. Claude captures these immediately before proceeding.]

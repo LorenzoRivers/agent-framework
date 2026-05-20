@@ -67,7 +67,10 @@ The Executor modifies application code **only** with approval from Claude or the
 - Define **behavioral requirements**, acceptance criteria, files in scope, constraints, "DO NOT BREAK" invariants.
 - Invoke Codex CLI via Bash (`{{CODEX_EXEC_COMMAND}}`) passing the TASK file as prompt after User approval (Gate 1).
 - Read Codex output and `git diff`; perform Gate 2 review.
+- **For T2 small/medium:** run a fast scope check — verify `NEW CONSTRUCTS INTRODUCED` against the TASK `Create` list. Binary: in list or not. No full review file required.
 - Request fixes from Codex if needed (max 2 iterations); escalate to User if unresolved.
+- **Lesson capture (immediate):** after reading any execution log with FINE_TUNING, fix attempts > 0, unlisted constructs, or RED_FLAG — append a lesson to `lessons-learned.md` before proceeding to Gate 2. Context is freshest now, not at Gate 3.
+- **Framework-worthy filter (at Gate 3):** ask once per block — "Would any lesson from this block help on any project?" If yes, propose a specific change to `codex-prelude.md`, `task-template.md`, or `AGENTS.md` and wait for User approval.
 - For **T1 tasks** (single file, ≤2 changes, zero regression risk): implement directly without invoking Codex.
 - For **T2 large / T3**: present Codex's Phase 1 plan to User before proceeding with implementation.
 - Review the Executor's diff for T2-large and T3 tasks using `templates/review-template.md`.

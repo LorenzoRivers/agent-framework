@@ -113,6 +113,15 @@ Codex CLI runs the internal loop (lint + tests + fix if needed) before committin
 
 **If Codex auto-corrected failures during the loop:** Claude reads the test report, verifies all pass, then examines the cumulative diff (implementation + fixes).
 
+**Lesson capture — immediate, while context is fresh:**
+After reading the execution log, Claude checks for any of these signals:
+- Phase 0 verdict is `FINE_TUNING` (a deviation was necessary)
+- Fix attempts > 0 (Codex had to correct itself)
+- `NEW CONSTRUCTS INTRODUCED` contains items not in the TASK `Create` list
+- RED_FLAG was raised (even if resolved)
+
+If any signal is present, Claude **immediately** appends a lesson to `.codex/knowledge/project/lessons-learned.md` before proceeding to Gate 2. The lesson is written while the execution context is still available — not reconstructed later at Gate 3.
+
 **If Codex reports tests still failing (RESIDUAL ISSUES):** Claude applies the "Try to Fix" diagnosis:
 
 1. **Classify each failure** (Type A/B/C/D — see codex-prelude.md)
@@ -130,7 +139,7 @@ Max 2 "Try to Fix" iterations from Claude. On the third failure, it is the User'
 | Task tier | Who validates | Format |
 |---|---|---|
 | **T1 inline** | Claude checks: lint + tests + diff | Approval in chat |
-| **T2 small/medium** | Claude reads: test report + diff from Codex | Approval in chat |
+| **T2 small/medium** | Claude reads: test report + **scope check** + diff | Approval in chat |
 | **T2 large / T3** | Claude: test report + diff + formal review | `REVIEW-NNN.md` |
 | **Tests failed after internal loop** | Claude → targeted "Try to Fix" (max 2×) | Surgical fix in prompt |
 | **Still failing after 2 Try to Fix** | Claude reports to User | Full diagnosis + options |
@@ -160,6 +169,7 @@ After every merge, Claude **proposes deleting the merged branch** (both local an
 - User runs the **Gate 3 checklist**: `.codex/checklists/gate3-block-approval.md`.
 - On explicit User approval: merge `block/BLOCK-N-slug` → `dev`, then push immediately.
 - `dev → main` merge happens later, only on explicit User request.
+- **Framework-worthy filter (one question):** Claude reviews the lessons captured during this block and asks: *"Would any of these help on any project, or only on this one?"* If a candidate exists, Claude proposes a specific update to `codex-prelude.md`, `task-template.md`, or `AGENTS.md` and waits for explicit User approval before making the change. If no candidate exists, skip.
 - **Session handoff:** at the end of each Claude session, Claude updates `.codex/knowledge/project/session-handoff.md` with decisions taken, pending items, and next candidate task.
 
 ---

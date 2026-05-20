@@ -200,6 +200,7 @@ As the **final step**, append the following section to the TASK file (`.codex/ta
 
 **Residual issues:** <list with failure type A/B/C/D, cause, what was tried — or "none">
 **Assumptions made:** <list or "none">
+**Lesson candidates:** <flag any FINE_TUNING deviation, fix attempt, or unlisted construct with a one-line description of what went wrong and why — Claude will capture this as a lesson immediately after reading this log. Write "none" if execution was clean.>
 ```
 
 ---
@@ -236,6 +237,9 @@ RESIDUAL ISSUES:
 
 ASSUMPTIONS:
 - <assumption> or none
+
+LESSON CANDIDATES:
+- <one-line description of any FINE_TUNING deviation, fix attempt, or unlisted construct> or none
 
 NEXT: <what Claude should do — e.g. "all tests green, review diff and approve Gate 2" | "2 Playwright tests still failing, see RESIDUAL ISSUES">
 ```
