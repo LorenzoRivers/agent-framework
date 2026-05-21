@@ -259,7 +259,12 @@ If the simplify review makes changes: commit them to the task branch before merg
 
 - User runs the **Gate 3 checklist**: `.codex/checklists/gate3-block-approval.md`.
 - On explicit User approval: merge `block/BLOCK-N-slug` → `dev`, then push immediately.
-- `dev → main` merge happens later, only on explicit User request.
+- `dev → main` merge happens later, only on explicit User request. When it does, always sync back immediately:
+  ```bash
+  git checkout main && git merge dev && git push origin main
+  git checkout dev  && git merge main && git push origin dev
+  ```
+  Skipping the second step accumulates merge commits on `main` that `dev` never sees — after N merges, `dev` appears N commits behind `main` even though it contains all the real work.
 - **Framework-worthy filter (one question):** Claude reviews the lessons captured during this block and asks: *"Would any of these help on any project, or only on this one?"* If a candidate exists, Claude proposes a specific update to `codex-prelude.md`, `task-template.md`, or `AGENTS.md` and waits for explicit User approval before making the change. If no candidate exists, skip.
 - **Session handoff:** at the end of each Claude session, Claude updates `.codex/knowledge/project/session-handoff.md` with decisions taken, pending items, and next candidate task.
 
