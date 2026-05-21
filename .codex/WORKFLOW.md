@@ -27,10 +27,10 @@ User                 Claude              Codex CLI           Runtime
  │                     │<──────────────────┤                    │
  │                     │  6. Gate 2        │                    │
  │<────────────────────┤  (review/fix)     │                    │
- │  on approve: merge task/* → block/BLOCK-N                    │
+ │  on approve: /simplify (T2-large/T3) → merge task/* → block/BLOCK-N
  │  (repeat steps 1-6 for each task in the block)               │
  │                                                              │
- │  7. Gate 3: block complete — manual checks                   │
+ │  7. Gate 3: /security-review → manual checks                 │
  ├──────────────────────────────────────────────────────────────>│
  │  (Runtime: visual inspection + runtime verification)         │
  │<──────────────────────────────────────────────────────────────┤
@@ -198,6 +198,29 @@ The User decides:
 After every merge, Claude **proposes deleting the merged branch** (both local and remote) and waits for explicit User approval.
 
 ### After Gate 2 (task merged to block branch)
+
+#### `/simplify` — optional cleanup step (recommended for T2-large and T3)
+
+Before merging to the block branch, run `/simplify` on the task diff. This launches 3 parallel subagents on `git diff`:
+
+- **Reuse agent** — flags new code that duplicates existing utilities or patterns in the codebase
+- **Quality agent** — flags redundant state, parameter sprawl, copy-paste blocks, leaky abstractions, unnecessary comments
+- **Efficiency agent** — flags unnecessary work, missed concurrency, hot-path bloat, memory leaks
+
+If issues are found, `/simplify` fixes them directly and reports what changed. Claude reads the result before proceeding with the merge.
+
+**When to run:**
+
+| Tier | `/simplify`? |
+|---|---|
+| T1 | Skip |
+| T2-small | Skip |
+| T2-medium | Optional — run if the diff is non-trivial |
+| T2-large / T3 | **Recommended** — run before Gate 2 review or before merge |
+
+If `/simplify` makes changes: commit them to the task branch before merging. The task branch must contain the final clean version.
+
+---
 
 - Branch `task/TASK-NNN-slug` is merged to `block/BLOCK-N-slug`.
 - **Optional wiki refresh:** if the project has a wiki generator, run `{{WIKI_COMMAND}}` to regenerate the codebase wiki before pushing.
