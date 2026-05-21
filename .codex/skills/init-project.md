@@ -12,6 +12,16 @@
 
 Ask the User these questions (use AskUserQuestion where possible, otherwise ask in chat). Collect all answers before proceeding — do not start making changes mid-interview.
 
+**First — choose doc mode (ask before anything else):**
+
+> "Che modalità doc vuoi usare?"
+> - **A — Lightweight** (MVP, progetto personale): un solo `docs/project-brief.md` da 1 pagina, 15 minuti. Consigliato per iniziare.
+> - **B — Full** (progetto complesso, produzione): 4 doc separati (prd, tech-spec, roadmap, dev-handbook). Più robusto, più tempo.
+
+Record the answer as `DOC_MODE = A | B`. It determines what Phase 4 does.
+
+---
+
 **Required:**
 
 1. **Project name** — the canonical name used in docs and commit messages (e.g. `MyApp`)
@@ -20,18 +30,19 @@ Ask the User these questions (use AskUserQuestion where possible, otherwise ask 
 4. **Lint command** — command to run linting/type-checking (e.g. `npm run check`, `ruff check . && mypy .`, `golangci-lint run`)
 5. **Test command** — command to run tests (e.g. `npm test`, `pytest`, `go test ./...`)
 6. **Runtime / deploy platform** — where the app runs (e.g. `Vercel`, `Fly.io`, `Railway`, `local Docker`, `Replit`)
+7. **Block 1 goal** — one sentence: what will Block 1 deliver? (e.g. "Auth system with login and signup")
 
 **Optional (ask, accept "none" or blank):**
 
-7. **Wiki command** — command to auto-generate a codebase wiki, if any (e.g. `npm run wiki`) — leave blank if not applicable
-8. **Infrastructure hard rules** — any operations the Executor must never run (e.g. "never run DROP or TRUNCATE", "never deploy to production without explicit trigger") — leave blank if no constraints
-9. **Sensitive paths** — directories that require special authorization (e.g. `prisma/migrations/, .github/workflows/`) — leave blank if not applicable
-10. **Block 1 goal** — one sentence: what will Block 1 deliver? (e.g. "Auth system with login and signup")
+8. **Wiki command** — command to auto-generate a codebase wiki, if any (e.g. `npm run wiki`) — leave blank if not applicable
+9. **Infrastructure hard rules** — any operations the Executor must never run (e.g. "never run DROP or TRUNCATE", "never deploy to production without explicit trigger") — leave blank if no constraints
+10. **Sensitive paths** — directories that require special authorization (e.g. `prisma/migrations/, .github/workflows/`) — leave blank if not applicable
 
 After collecting all answers, confirm with the User in a single summary before making any changes:
 
 ```
 Ready to initialize [PROJECT_NAME]:
+- Doc mode: A — Lightweight | B — Full
 - Stack: [stack]
 - App paths: [paths]
 - Lint: [lint command]
@@ -115,30 +126,71 @@ Read `.codex/knowledge/project/session-handoff.md` before accepting any task.
 
 ## Phase 4 — Initialize docs
 
+### Mode A — Lightweight
+
+Create `docs/project-brief.md` directly (no template to copy):
+
+```markdown
+# [PROJECT_NAME] — Project Brief
+
+## What it is
+[1-3 sentences on what you're building and for whom — filled from Phase 1 answers]
+
+## What it is NOT
+[Leave blank — User fills in non-goals]
+
+## Tech stack
+[Stack from Phase 1]
+
+## Data model (rough)
+[Leave blank — User fills in as they go]
+
+## Block 1 goal
+[Block 1 goal from Phase 1]
+```
+
+Pre-fill "What it is" from the project name + stack collected in Phase 1. Leave the rest for the User.
+
+Report:
+```
+✅ docs/project-brief.md created (Mode A — Lightweight)
+
+Fill in before starting TASK-001:
+1. "What it is NOT" — 1-2 non-goals to prevent scope creep (5 min)
+2. "Data model" — key entities and main fields, rough is fine (10 min)
+Come back when done — I'll write TASK-001.
+```
+
+---
+
+### Mode B — Full
+
 Copy the doc templates:
 
 ```bash
-cp docs/templates/prd-template.md      docs/prd.md
+cp docs/templates/prd-template.md       docs/prd.md
 cp docs/templates/tech-spec-template.md docs/tech-spec.md
-cp docs/templates/roadmap-template.md  docs/roadmap.md
+cp docs/templates/roadmap-template.md   docs/roadmap.md
 cp docs/templates/dev-handbook-template.md docs/dev-handbook.md
 ```
 
-Then open each file and fill in the top section with what is already known from Phase 1:
+Pre-fill from Phase 1 answers:
+- `docs/tech-spec.md` → fill in the tech stack section
+- `docs/roadmap.md` → fill in BLOCK-1 name and goal
 
-- `docs/tech-spec.md` → fill in the tech stack section with the stack from Phase 1
-- `docs/roadmap.md` → fill in BLOCK-1 name and goal from Phase 1 (question 10)
-- `docs/prd.md` → leave mostly blank — the User fills this in
-- `docs/dev-handbook.md` → leave mostly blank — the User fills this in
+Leave `docs/prd.md` and `docs/dev-handbook.md` mostly blank for the User.
 
-Report to the User which sections need their input, with a priority order:
+Report:
 ```
+✅ Doc templates copied (Mode B — Full)
+
 Minimum to start BLOCK-1 (fill these first):
 1. docs/prd.md — product vision and non-goals (15-30 min)
 2. docs/tech-spec.md — data model and API contracts (partially pre-filled)
 3. docs/roadmap.md — BLOCK-1 task list (partially pre-filled)
 Optional before BLOCK-2:
 4. docs/dev-handbook.md — invariants and naming conventions
+Come back when done — I'll write TASK-001.
 ```
 
 ---
@@ -234,8 +286,15 @@ Run the setup verification checklist:
 # 1. No placeholders remaining
 grep -r "{{" .codex/ && echo "PLACEHOLDERS FOUND" || echo "✅ No placeholders"
 
-# 2. Required files exist
-for f in CLAUDE.md docs/prd.md docs/tech-spec.md docs/roadmap.md .codex/knowledge/project/session-handoff.md; do
+# 2. Required files — adapt to doc mode
+# Mode A: check for project-brief.md
+# Mode B: check for prd.md, tech-spec.md, roadmap.md
+if [ "$DOC_MODE" = "A" ]; then
+  DOC_FILES="CLAUDE.md docs/project-brief.md .codex/knowledge/project/session-handoff.md"
+else
+  DOC_FILES="CLAUDE.md docs/prd.md docs/tech-spec.md docs/roadmap.md .codex/knowledge/project/session-handoff.md"
+fi
+for f in $DOC_FILES; do
   [ -f "$f" ] && echo "✅ $f" || echo "❌ MISSING: $f"
 done
 
@@ -247,10 +306,27 @@ git branch -a
 
 ## Phase 9 — Handoff summary
 
-Report to the User:
-
+**Mode A:**
 ```
-✅ [PROJECT_NAME] initialized
+✅ [PROJECT_NAME] initialized (Lightweight)
+
+Setup complete:
+  ✅ Placeholders replaced in .codex/
+  ✅ CLAUDE.md created
+  ✅ docs/project-brief.md created
+  ✅ session-handoff.md initialized
+  ✅ Git: main / dev / block/BLOCK-1-setup branches created
+
+Next steps (2, fast):
+  1. Fill in "What it is NOT" + "Data model" in docs/project-brief.md (15 min)
+  Come back when done — I'll write TASK-001.
+
+Current branch: block/BLOCK-1-setup
+```
+
+**Mode B:**
+```
+✅ [PROJECT_NAME] initialized (Full)
 
 Setup complete:
   ✅ Placeholders replaced in .codex/
@@ -260,9 +336,9 @@ Setup complete:
   ✅ Git: main / dev / block/BLOCK-1-setup branches created
 
 Next steps (in order):
-  1. Fill docs/prd.md — product vision, non-goals, 2-3 key flows
-  2. Fill docs/tech-spec.md — data model and API contracts
-  3. Fill docs/roadmap.md — BLOCK-1 task list
+  1. Fill docs/prd.md — product vision, non-goals, 2-3 key flows (30 min)
+  2. Fill docs/tech-spec.md — data model and API contracts (45 min)
+  3. Fill docs/roadmap.md — BLOCK-1 task list (15 min)
   Come back when done — I'll write TASK-001.
 
 Current branch: block/BLOCK-1-setup
