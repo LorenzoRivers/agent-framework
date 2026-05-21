@@ -72,8 +72,8 @@ A battle-tested multi-agent workflow framework for software product development.
 ## Quickstart
 
 1. **Use this template** (GitHub button) or clone it.
-2. Follow `SETUP.md` — replace placeholders, configure your stack, init git.
-3. Write your first `/docs/prd.md` and `/docs/tech-spec.md`.
+2. Open Claude Code in the project root and say **"init project"** — Claude runs `.codex/skills/init-project.md` autonomously: asks 6-10 questions, replaces all placeholders, creates `CLAUDE.md`, initializes docs and git branches. (Manual alternative: `SETUP.md`.)
+3. Fill in `/docs/prd.md` and `/docs/tech-spec.md` — Claude will guide you on what's needed.
 4. Start a Claude Code session. Claude reads `session-handoff.md`, you describe what you want, Claude writes `TASK-001.md`.
 5. Approve the task (Gate 1). Pass it to your Executor (Codex CLI).
 6. Executor implements, returns output. Claude reviews (if T2-large/T3). You approve (Gate 2).

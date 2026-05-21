@@ -1,5 +1,19 @@
 # Setup Guide — New Project from agent-framework
 
+## Automated setup (recommended)
+
+Instead of following this manual checklist, open Claude Code in the project root and say:
+
+> "init project" / "inizializza il progetto" / "setup this project"
+
+Claude will run `.codex/skills/init-project.md` autonomously — asking you the necessary questions, replacing all placeholders, creating `CLAUDE.md`, initializing docs and git branches in a single session.
+
+**Use this manual guide only if** you need fine-grained control over specific steps, or if the automated setup is unavailable.
+
+---
+
+## Manual setup — full reference
+
 Complete this checklist when initializing a new project from this template. Every `{{PLACEHOLDER}}` in the framework must be resolved before use.
 
 ---
