@@ -49,13 +49,30 @@ Verify that features from prior blocks still work:
 
 ---
 
-## 5. Known issues
+## 5. Security review
+
+Run `/security-review` on the block branch before merging to `dev`. The skill analyzes the diff with parallel subagents and filters false positives automatically — only findings with confidence ≥ 8 are reported.
+
+```bash
+# Ensure you're on the block branch, then run in Claude Code:
+/security-review
+```
+
+- [ ] `/security-review` completed — no HIGH or MEDIUM findings outstanding
+- [ ] Any findings addressed or explicitly accepted with rationale documented below
+
+**Security review findings / acceptance notes:**
+[Document any findings raised and their resolution, or write "none" if the review was clean]
+
+---
+
+## 6. Known issues
 
 - [ ] All known issues from this block are either fixed or explicitly deferred to a future block (documented in `knowledge/project/deferred-issues.md`)
 
 ---
 
-## 6. Branch state
+## 7. Branch state
 
 - [ ] All task branches for this block are merged into `block/BLOCK-N-[slug]`
 - [ ] All task branches are deleted (local + remote) after User approval
