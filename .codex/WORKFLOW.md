@@ -27,10 +27,10 @@ User                 Claude              Codex CLI           Runtime
  │                     │<──────────────────┤                    │
  │                     │  6. Gate 2        │                    │
  │<────────────────────┤  (review/fix)     │                    │
- │  on approve: /simplify (T2-large/T3) → merge task/* → block/BLOCK-N
+ │  on approve: simplify review (T2-large/T3) → merge task/* → block/BLOCK-N
  │  (repeat steps 1-6 for each task in the block)               │
  │                                                              │
- │  7. Gate 3: /security-review → manual checks                 │
+ │  7. Gate 3: security review → manual checks                  │
  ├──────────────────────────────────────────────────────────────>│
  │  (Runtime: visual inspection + runtime verification)         │
  │<──────────────────────────────────────────────────────────────┤
@@ -199,26 +199,50 @@ After every merge, Claude **proposes deleting the merged branch** (both local an
 
 ### After Gate 2 (task merged to block branch)
 
-#### `/simplify` — optional cleanup step (recommended for T2-large and T3)
+#### Simplify review — optional cleanup step (recommended for T2-large and T3)
 
-Before merging to the block branch, run `/simplify` on the task diff. This launches 3 parallel subagents on `git diff`:
-
-- **Reuse agent** — flags new code that duplicates existing utilities or patterns in the codebase
-- **Quality agent** — flags redundant state, parameter sprawl, copy-paste blocks, leaky abstractions, unnecessary comments
-- **Efficiency agent** — flags unnecessary work, missed concurrency, hot-path bloat, memory leaks
-
-If issues are found, `/simplify` fixes them directly and reports what changed. Claude reads the result before proceeding with the merge.
+Before merging to the block branch, Claude runs a simplify review on the task diff. This step does **not** require any external plugin — Claude executes it autonomously.
 
 **When to run:**
 
-| Tier | `/simplify`? |
+| Tier | Simplify review? |
 |---|---|
 | T1 | Skip |
 | T2-small | Skip |
 | T2-medium | Optional — run if the diff is non-trivial |
 | T2-large / T3 | **Recommended** — run before Gate 2 review or before merge |
 
-If `/simplify` makes changes: commit them to the task branch before merging. The task branch must contain the final clean version.
+**How Claude executes it:**
+
+1. Run `git diff` (or `git diff HEAD` if staged changes) to get the full task diff.
+2. Launch three review subagents **in parallel**, each receiving the full diff as context:
+
+   **Subagent 1 — Code Reuse:**
+   - Search for existing utilities and helpers that could replace newly written code
+   - Flag any new function that duplicates existing functionality — suggest the existing one
+   - Flag inline logic that could use an existing utility (hand-rolled string manipulation, manual path handling, custom type guards, etc.)
+
+   **Subagent 2 — Code Quality:**
+   - Redundant state: state that duplicates existing state, cached values that could be derived
+   - Parameter sprawl: new parameters added instead of restructuring
+   - Copy-paste with slight variation: near-duplicate blocks that should be unified
+   - Leaky abstractions: internal details exposed that should be encapsulated
+   - Stringly-typed code: raw strings where constants or enums already exist
+   - Unnecessary JSX nesting: wrapper elements that add no layout value
+   - Unnecessary comments: comments explaining *what* the code does (not *why*)
+
+   **Subagent 3 — Efficiency:**
+   - Unnecessary work: redundant computations, repeated reads, duplicate API calls, N+1 patterns
+   - Missed concurrency: independent operations run sequentially
+   - Hot-path bloat: blocking work added to startup or per-request paths
+   - Recurring no-op updates: state updates inside loops that fire unconditionally without change detection
+   - Unnecessary existence checks before operating (TOCTOU anti-pattern)
+   - Memory: unbounded data structures, missing cleanup, event listener leaks
+
+3. Wait for all three subagents. Aggregate findings and **fix each issue directly** in the codebase. If a finding is a false positive, note it and skip — do not argue.
+4. Report briefly: what was fixed, or confirm the code was already clean.
+
+If the simplify review makes changes: commit them to the task branch before merging. The block branch must always contain the final clean version.
 
 ---
 

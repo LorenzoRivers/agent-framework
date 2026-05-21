@@ -51,18 +51,53 @@ Verify that features from prior blocks still work:
 
 ## 5. Security review
 
-Run `/security-review` on the block branch before merging to `dev`. The skill analyzes the diff with parallel subagents and filters false positives automatically — only findings with confidence ≥ 8 are reported.
+Claude runs a security review on the block branch diff before merging to `dev`. This step does **not** require any external plugin — Claude executes it autonomously.
 
-```bash
-# Ensure you're on the block branch, then run in Claude Code:
-/security-review
+**How Claude executes it:**
+
+1. Run `git diff dev..block/BLOCK-N-[slug]` to get the full block diff.
+2. Launch a **vulnerability identification subagent** with the full diff and these instructions:
+   - Analyze the changes for concrete, exploitable security vulnerabilities with a clear attack path
+   - Focus on: injection (SQL, command, path traversal), authentication/authorization bypass, sensitive data exposure (PII in logs, secrets in code), insecure direct object references, missing ownership checks, unsafe deserialization
+   - For each candidate finding: assess whether it is a real vulnerability vs. a theoretical best practice concern
+
+3. For each vulnerability identified, launch a **false-positive filter subagent** (in parallel). Each subagent applies these automatic exclusions:
+   - DOS / resource exhaustion, rate limiting concerns
+   - Secrets on disk if otherwise secured
+   - Outdated third-party libraries
+   - Memory safety issues in memory-safe languages (Rust, Go, etc.)
+   - Vulnerabilities only in test files
+   - Log spoofing, regex injection, regex DOS
+   - SSRF that only controls the path (not host or protocol)
+   - React/Angular components not using `dangerouslySetInnerHTML` or equivalent — XSS-safe by default
+   - Client-side JS/TS lacking auth checks — auth is the server's responsibility
+   - Lack of audit logs, hardening measures, or input validation on non-security-critical fields
+   - Theoretical race conditions without a concrete attack path
+   - Generic GitHub Actions vulnerabilities without a specific untrusted input path
+
+4. Each false-positive subagent assigns a **confidence score 1–10**. Only findings with confidence ≥ 8 are included in the final report.
+
+5. Claude produces a markdown report. For each HIGH or MEDIUM finding: file path, line, vulnerability type, attack path, recommended fix.
+
+**Output format:**
+```
+## Security Review — block/BLOCK-N-[slug]
+
+### HIGH findings
+- [ ] [File:line] [Type] — [description] — [fix]
+
+### MEDIUM findings
+- [ ] [File:line] [Type] — [description] — [fix]
+
+### Result
+CLEAN / FINDINGS (N high, M medium)
 ```
 
-- [ ] `/security-review` completed — no HIGH or MEDIUM findings outstanding
-- [ ] Any findings addressed or explicitly accepted with rationale documented below
+- [ ] Security review completed — no HIGH findings outstanding
+- [ ] MEDIUM findings either fixed or explicitly accepted with rationale below
 
 **Security review findings / acceptance notes:**
-[Document any findings raised and their resolution, or write "none" if the review was clean]
+[Document any findings and their resolution, or write "none — review was clean"]
 
 ---
 
