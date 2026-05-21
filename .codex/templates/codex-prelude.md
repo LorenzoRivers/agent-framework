@@ -2,7 +2,7 @@
 
 ## How you were invoked
 
-You were launched by **Claude Code** via `{{CODEX_EXEC_COMMAND}}` in non-interactive mode. Do not interact with the User directly — all your output returns to Claude, who processes it and decides whether to present it to the User or request corrections.
+You were launched by **Claude Code** via `~/bin/codex-ai exec` in non-interactive mode. Do not interact with the User directly — all your output returns to Claude, who processes it and decides whether to present it to the User or request corrections.
 
 - Follow the assigned TASK exactly.
 - For T2 large / T3, if the TASK says "Phase 1 only": write the plan in `.codex/tasks/TASK-NNN-plan.md` and **stop without modifying any application file**. Wait for Claude to re-invoke with "Phase 1 approved, proceed."

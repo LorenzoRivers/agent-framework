@@ -126,14 +126,14 @@ For trivial tasks (T1), the User can approve a short inline prompt directly in c
 After Gate 1 approval, Claude invokes Codex CLI non-interactively via Bash:
 
 ```bash
-{{CODEX_EXEC_COMMAND}} \
+~/bin/codex-ai exec \
   -C "<project_root>" \
   -s danger-full-access \
   --output-last-message /tmp/codex_out.md \
   "$(cat .codex/tasks/TASK-NNN-slug.md)"
 ```
 
-<!-- {{CODEX_EXEC_COMMAND}}: e.g. ~/bin/codex-ai exec, codex exec -->
+<!-- Default: ~/bin/codex-ai exec — change in SETUP.md if your Codex binary is elsewhere -->
 <!-- Note: use -s danger-full-access (not workspace-write) — workspace-write blocks writes to .codex/tasks/, git, and npm -->
 <!-- Note: pre-create the branch before invoking: git checkout -b task/TASK-NNN-slug block/BLOCK-N-slug -->
 

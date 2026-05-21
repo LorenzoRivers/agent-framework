@@ -82,7 +82,42 @@ Example:
 
 ## 4. Set up /docs structure
 
-Copy the templates and fill them in — this is the most important setup step:
+Choose the doc mode that fits the project size:
+
+---
+
+### Mode A — Lightweight (MVP, personal project, exploration)
+
+Create a single `docs/project-brief.md` — 1 page, no template needed:
+
+```markdown
+# [Project name] — Project Brief
+
+## What it is
+[1-3 sentences on what you're building and for whom]
+
+## What it is NOT
+[1-2 non-goals — prevents scope creep]
+
+## Tech stack
+[Language, framework, DB, deploy platform]
+
+## Data model (rough)
+[Key entities and their main fields — doesn't need to be complete]
+
+## First feature to build (Block 1)
+[What Block 1 delivers — 1 sentence]
+```
+
+Claude uses this to write tasks. Add `docs/tech-spec.md` and `docs/dev-handbook.md` progressively as the project grows — they're not needed upfront.
+
+**Minimum to start BLOCK-1 in lightweight mode:** `docs/project-brief.md` filled in (15 min).
+
+---
+
+### Mode B — Full (complex project, multi-month, production)
+
+Copy the templates and fill them in:
 
 ```sh
 cp docs/templates/prd-template.md       docs/prd.md
@@ -97,11 +132,15 @@ cp docs/templates/dev-handbook-template.md docs/dev-handbook.md
 3. `docs/roadmap.md` — BLOCK-1 scope and rough task list (15 min)
 4. `docs/dev-handbook.md` — 3-4 invariants + naming conventions (20 min)
 
-**Minimum to start BLOCK-1:** `prd.md` (partial) + `tech-spec.md` (stack + data model) + `roadmap.md` (BLOCK-1 scope).
+**Minimum to start BLOCK-1 in full mode:** `prd.md` (partial) + `tech-spec.md` (stack + data model) + `roadmap.md` (BLOCK-1 scope).
 
-`docs/design.md` is optional — add it only if the project has significant UI work requiring precise behavior spec.
+`docs/design.md` is optional — add only if the project has significant UI work.
 
-See `docs/README.md` for guidance on how Claude uses each document and what to write in each section.
+See `docs/README.md` for guidance on what to write in each section.
+
+---
+
+**Rule of thumb:** start with Mode A. Migrate to Mode B if the project goes to production or involves more than one developer.
 
 ---
 
