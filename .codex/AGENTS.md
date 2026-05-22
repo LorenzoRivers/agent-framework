@@ -14,13 +14,12 @@ Four actors collaborate on {{PROJECT_NAME}}:
 |---|---|---|
 | **User** | Decision-maker, product owner, final approver | No |
 | **Claude Code** | Planner, Architect, Reviewer, **Orchestrator of Codex CLI** | Only `.codex/**` and only when explicitly asked |
-| **Codex CLI** | Implementer — invoked by Claude via `{{CODEX_EXEC_COMMAND}}` | Yes — application code, on dedicated task branches, with approval |
+| **Codex CLI** | Implementer — invoked by Claude via `~/bin/codex-ai exec` | Yes — application code, on dedicated task branches, with approval |
 | **{{RUNTIME_PLATFORM}}** | Runtime, deployment, visual inspection | No (autonomous code edits forbidden) |
 
-<!-- {{CODEX_EXEC_COMMAND}}: e.g. ~/bin/codex-ai exec, codex exec, npx codex -->
 <!-- {{RUNTIME_PLATFORM}}: e.g. Replit, Vercel, local Docker, Railway, Expo/EAS Build -->
 
-**Core principle:** Claude reasons about the system and orchestrates Codex CLI. The User talks only to Claude. Claude invokes Codex CLI via Bash (`{{CODEX_EXEC_COMMAND}}`). The User never runs Codex commands directly.
+**Core principle:** Claude reasons about the system and orchestrates Codex CLI. The User talks only to Claude. Claude invokes Codex CLI via Bash (`~/bin/codex-ai exec`). The User never runs Codex commands directly.
 
 If Claude and Codex both reason about architecture and both write code, the system becomes incoherent. Stay in role.
 
@@ -65,7 +64,7 @@ The Executor modifies application code **only** with approval from Claude or the
 - Translate User intent into a concrete `TASK-NNN.md` using `templates/task-template.md`.
 - Decompose large work into small atomic tasks.
 - Define **behavioral requirements**, acceptance criteria, files in scope, constraints, "DO NOT BREAK" invariants.
-- Invoke Codex CLI via Bash (`{{CODEX_EXEC_COMMAND}}`) passing the TASK file as prompt after User approval (Gate 1).
+- Invoke Codex CLI via Bash (`~/bin/codex-ai exec`) passing the TASK file as prompt after User approval (Gate 1).
 - Read Codex output and `git diff`; perform Gate 2 review.
 - **For T2 small/medium:** run a fast scope check — verify `NEW CONSTRUCTS INTRODUCED` against the TASK `Create` list. Binary: in list or not. No full review file required.
 - Request fixes from Codex if needed (max 2 iterations); escalate to User if unresolved.

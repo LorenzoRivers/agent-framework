@@ -8,6 +8,33 @@
 
 ---
 
+## Guard — verify correct repo before starting
+
+Before asking any question, run:
+
+```bash
+basename $(git rev-parse --show-toplevel) 2>/dev/null
+cat README.md 2>/dev/null | head -3
+```
+
+If the repo name is `agent-framework` OR if README.md contains "A battle-tested multi-agent workflow framework" → **stop immediately** and report:
+
+```
+❌ Stai eseguendo init-project sul repo agent-framework stesso.
+
+agent-framework è il template — non va inizializzato su se stesso.
+
+Cosa fare:
+1. Vai su github.com/LorenzoRivers/agent-framework
+2. Clicca "Use this template" → "Create a new repository"
+3. Clona il nuovo repo in locale
+4. Aprilo in VS Code e riesegui "init project"
+```
+
+Do not proceed past this point if the guard triggers.
+
+---
+
 ## Phase 1 — Gather project information
 
 Ask the User these questions (use AskUserQuestion where possible, otherwise ask in chat). Collect all answers before proceeding — do not start making changes mid-interview.
