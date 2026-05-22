@@ -2,22 +2,22 @@
 
 **Trigger:** User says "init project", "setup this project", "inizializza il progetto", or similar.
 
-**What this skill does:** sets up a new project cloned from agent-framework in a single session — replaces all placeholders, creates CLAUDE.md, initializes docs, configures git. No manual `sed` commands, no file copying by hand.
+**What this skill does:** sets up a new project cloned from agent-framework in a single session — reads GitHub repo context, replaces all placeholders, creates CLAUDE.md, initializes docs, configures git branches.
 
-**Prerequisite:** the project was cloned or created from the agent-framework template and has not yet been configured (placeholders still present).
+**Execution contract:** once the User confirms at the end of Phase 1, Claude executes Phases 2–9 **sequentially and without stopping**. No mid-execution questions. No pausing between phases. Every phase runs to completion before the next begins. The only pause point is the confirmation at the end of Phase 1.
 
 ---
 
 ## Guard — verify correct repo before starting
 
-Before asking any question, run:
+Before anything else, run:
 
 ```bash
 basename $(git rev-parse --show-toplevel) 2>/dev/null
-cat README.md 2>/dev/null | head -3
+head -3 README.md 2>/dev/null
 ```
 
-If the repo name is `agent-framework` OR if README.md contains "A battle-tested multi-agent workflow framework" → **stop immediately** and report:
+If the repo name is `agent-framework` OR if README.md contains "A battle-tested multi-agent workflow framework" → **stop immediately**:
 
 ```
 ❌ Stai eseguendo init-project sul repo agent-framework stesso.
@@ -35,164 +35,200 @@ Do not proceed past this point if the guard triggers.
 
 ---
 
-## Phase 1 — Gather project information
+## Phase 0 — Read GitHub repo context (automatic, no questions)
 
-Ask the User these questions (use AskUserQuestion where possible, otherwise ask in chat). Collect all answers before proceeding — do not start making changes mid-interview.
-
-**First — choose doc mode (ask before anything else):**
-
-> "Che modalità doc vuoi usare?"
-> - **A — Lightweight** (MVP, progetto personale): un solo `docs/project-brief.md` da 1 pagina, 15 minuti. Consigliato per iniziare.
-> - **B — Full** (progetto complesso, produzione): 4 doc separati (prd, tech-spec, roadmap, dev-handbook). Più robusto, più tempo.
-
-Record the answer as `DOC_MODE = A | B`. It determines what Phase 4 does.
-
----
-
-**Required:**
-
-1. **Project name** — the canonical name used in docs and commit messages (e.g. `MyApp`)
-2. **Tech stack** — primary language and framework (e.g. `Node.js + Express + Prisma`, `Python + FastAPI`, `Go`)
-3. **App code paths** — directories that contain application code, comma-separated (e.g. `src/, server/, client/`)
-4. **Lint command** — command to run linting/type-checking (e.g. `npm run check`, `ruff check . && mypy .`, `golangci-lint run`)
-5. **Test command** — command to run tests (e.g. `npm test`, `pytest`, `go test ./...`)
-6. **Runtime / deploy platform** — where the app runs (e.g. `Vercel`, `Fly.io`, `Railway`, `local Docker`, `Replit`)
-7. **Block 1 goal** — one sentence: what will Block 1 deliver? (e.g. "Auth system with login and signup")
-
-**Optional (ask, accept "none" or blank):**
-
-8. **Wiki command** — command to auto-generate a codebase wiki, if any (e.g. `npm run wiki`) — leave blank if not applicable
-9. **Infrastructure hard rules** — any operations the Executor must never run (e.g. "never run DROP or TRUNCATE", "never deploy to production without explicit trigger") — leave blank if no constraints
-10. **Sensitive paths** — directories that require special authorization (e.g. `prisma/migrations/, .github/workflows/`) — leave blank if not applicable
-
-After collecting all answers, confirm with the User in a single summary before making any changes:
-
-```
-Ready to initialize [PROJECT_NAME]:
-- Doc mode: A — Lightweight | B — Full
-- Stack: [stack]
-- App paths: [paths]
-- Lint: [lint command]
-- Test: [test command]
-- Platform: [platform]
-- Block 1: [goal]
-[Any optional items]
-
-Proceed?
-```
-
-Wait for explicit confirmation before Phase 2.
-
----
-
-## Phase 2 — Replace placeholders
-
-Run find-and-replace across all `.codex/**` files for each placeholder. Use the `sed` command via Bash:
+Run before asking anything:
 
 ```bash
-find .codex -type f -name "*.md" -exec sed -i '' 's/{{PROJECT_NAME}}/ACTUAL_VALUE/g' {} \;
+gh repo view --json name,description,url 2>/dev/null
 ```
 
-Replace in this order:
+Extract:
+- `name` → pre-fill as **Project name** (User can override)
+- `description` → pre-fill as **"What it is"** in the doc (User can override)
+- `url` → store for reference
 
-| Placeholder | Value from Phase 1 |
-|---|---|
-| `{{PROJECT_NAME}}` | Project name |
-| `{{RUNTIME_PLATFORM}}` | Runtime / deploy platform |
-| `{{APP_CODE_PATHS}}` | App code paths |
-| `{{LINT_COMMAND}}` | Lint command |
-| `{{TEST_COMMAND}}` | Test command |
-| `{{WIKI_COMMAND}}` | Wiki command (or remove the placeholder line if blank) |
-| `{{WIKI_PATH}}` | `.codex/knowledge/project/codebase-wiki.md` (default) or remove if no wiki |
-| `{{PLAYBOOK_ROOT}}` | `.codex` |
-| `{{INFRA_HARD_RULES}}` | Infrastructure hard rules (or remove the placeholder line if blank) |
-| `{{INFRA_SENSITIVE_PATHS}}` | Sensitive paths (or remove the placeholder line if blank) |
-| `{{PROJECT_CONSTRAINTS}}` | Derived from infra hard rules + "no unauthorized dependencies" |
-| `{{SELF_EVAL_MAX_RETRIES}}` | `2` (default) |
-
-After all replacements, verify no placeholders remain:
-
-```bash
-grep -r "{{" .codex/
-```
-
-If any remain: fix them before continuing. Report any that cannot be auto-resolved.
+If `gh` is not authenticated or the command fails: leave name and description blank — User will provide them manually in Phase 1.
 
 ---
 
-## Phase 3 — Create CLAUDE.md
+## Phase 1 — Interview (single pass, then confirm)
 
-Create `CLAUDE.md` in the project root with this structure:
+Ask ALL questions in one message. Collect all answers before making any change.
+
+**Pre-filled from Phase 0 (show to User, allow override):**
+- Project name: `[name from gh]`
+- What it is: `[description from gh]`
+
+**Questions:**
+
+1. **Doc mode:**
+   - **A — Lightweight** (MVP, progetto personale): un solo `docs/project-brief.md`, 15 min. Consigliato.
+   - **B — Full** (produzione, team): 4 doc separati. Più robusto.
+   Record as `DOC_MODE = A | B`.
+
+2. **Tech stack** — linguaggio + framework (e.g. `Node.js + Express + React`, `Python + FastAPI`, `Go`)
+
+3. **App code paths** — cartelle con codice applicativo (e.g. `src/`, `server/, client/`)
+
+4. **Lint command** — (e.g. `npm run lint`, `ruff check .`, `golangci-lint run`)
+
+5. **Test command** — (e.g. `npm test`, `pytest`, `go test ./...`)
+
+6. **Runtime / deploy platform** — (e.g. `Replit`, `Vercel`, `Fly.io`, `local`)
+
+7. **Punto di partenza di Block 1** — se il progetto ha sia frontend che backend:
+   - **Backend first** — Block 1 = API + data model → Block 2 = UI. Consigliato: valida la logica prima di costruire l'interfaccia.
+   - **Frontend first** — Block 1 = UI con dati mock → Block 2 = backend reale + wire-up. Utile quando il design guida le decisioni.
+   - **Full-stack insieme** — Block 1 = schema + API + UI insieme. Solo per progetti molto piccoli (≤ 3 endpoint, ≤ 2 schermate).
+   - **N/A** — progetto solo backend, solo frontend, o CLI.
+   Record as `START_FROM = backend | frontend | fullstack | na`.
+
+8. **Block 1 goal** — una frase su cosa consegna Block 1 (suggerisci in base alla risposta precedente):
+   - backend → e.g. `API REST CRUD con Express + schema dati`
+   - frontend → e.g. `UI React con dati mock, navigazione completa`
+   - fullstack → e.g. `App todo completa: schema + API + UI`
+
+**Optional (blank = skip):**
+
+9. **Wiki command** — se esiste un generatore di wiki (e.g. `npm run wiki`) — lascia vuoto altrimenti
+10. **Infrastructure hard rules** — operazioni che Codex non deve mai fare (e.g. "no DROP senza autorizzazione") — lascia vuoto se nessuna
+11. **Sensitive paths** — cartelle che richiedono autorizzazione speciale (e.g. `prisma/migrations/`) — lascia vuoto se nessuna
+
+**Confirmation — show summary, wait for explicit ok:**
+
+```
+Pronto per inizializzare [PROJECT_NAME]:
+  Doc mode:   A — Lightweight | B — Full
+  Stack:      [stack]
+  App paths:  [paths]
+  Lint:       [lint command]
+  Test:       [test command]
+  Platform:   [platform]
+  Start from: backend | frontend | fullstack | n/a
+  Block 1:    [goal]
+  [optional items if present]
+
+Procedo? (dopo conferma eseguo tutte le fasi senza fermarmi)
+```
+
+**Wait for explicit confirmation. After confirmation: execute Phases 2–9 in sequence without any further pauses.**
+
+---
+
+## Phase 2 — Replace placeholders (execute immediately after confirmation)
+
+Run all `sed` commands. Use single quotes to avoid zsh history expansion issues.
+
+```bash
+# Required replacements
+find .codex -type f -name '*.md' -exec sed -i '' "s/{{PROJECT_NAME}}/PROJECT_NAME_VALUE/g" {} \;
+find .codex -type f -name '*.md' -exec sed -i '' "s/{{RUNTIME_PLATFORM}}/PLATFORM_VALUE/g" {} \;
+find .codex -type f -name '*.md' -exec sed -i '' 's|{{APP_CODE_PATHS}}|PATHS_VALUE|g' {} \;
+find .codex -type f -name '*.md' -exec sed -i '' 's|{{LINT_COMMAND}}|LINT_VALUE|g' {} \;
+find .codex -type f -name '*.md' -exec sed -i '' 's|{{TEST_COMMAND}}|TEST_VALUE|g' {} \;
+find .codex -type f -name '*.md' -exec sed -i '' 's/{{PLAYBOOK_ROOT}}/.codex/g' {} \;
+find .codex -type f -name '*.md' -exec sed -i '' 's/{{SELF_EVAL_MAX_RETRIES}}/2/g' {} \;
+
+# Hardcode Codex exec command
+find .codex -type f -name '*.md' -exec sed -i '' 's|{{CODEX_EXEC_COMMAND}}|~/bin/codex-ai exec|g' {} \;
+
+# Remove setup meta-instruction (no longer needed once initialized)
+find .codex -type f -name '*.md' -exec sed -i '' '/replace every.*PLACEHOLDER/d' {} \;
+
+# Optional: remove unused placeholder lines
+find .codex -type f -name '*.md' -exec sed -i '' '/{{WIKI_COMMAND}}/d' {} \;
+find .codex -type f -name '*.md' -exec sed -i '' '/{{WIKI_PATH}}/d' {} \;
+find .codex -type f -name '*.md' -exec sed -i '' '/{{INFRA_HARD_RULES}}/d' {} \;
+find .codex -type f -name '*.md' -exec sed -i '' '/{{INFRA_SENSITIVE_PATHS}}/d' {} \;
+find .codex -type f -name '*.md' -exec sed -i '' '/{{LINT_TEST_DIR}}/d' {} \;
+find .codex -type f -name '*.md' -exec sed -i '' '/{{UNIT_TEST_COMMAND}}/d' {} \;
+find .codex -type f -name '*.md' -exec sed -i '' '/{{PROJECT_CONSTRAINTS}}/d' {} \;
+```
+
+Replace `PROJECT_NAME_VALUE`, `PLATFORM_VALUE`, `PATHS_VALUE`, `LINT_VALUE`, `TEST_VALUE` with the actual values from Phase 1.
+
+Verify:
+```bash
+grep -r '{{' .codex/ --include='*.md' | grep -v '<\!--' | grep -v 'templates/' | grep -v 'skills/init-project' | grep -v 'extensions/'
+```
+
+Expected: empty output. If any remain, fix before continuing.
+
+---
+
+## Phase 3 — Create CLAUDE.md (execute immediately, no pause)
+
+Overwrite `CLAUDE.md` in the project root. Use the GitHub repo name and description from Phase 0:
 
 ```markdown
 # [PROJECT_NAME] — Claude Code context
 
-## Role
-Claude Code is Planner and Reviewer only. Full contract: `.codex/AGENTS.md`.
+Navigation index: `.codex/INDEX.md` — read this first to find the right file fast.
+Full contract: `.codex/AGENTS.md` — read before acting.
+Current state: `.codex/knowledge/project/session-handoff.md`
+Sources of truth (priority): `docs/dev-handbook.md` → `docs/roadmap.md` → `docs/tech-spec.md` → `docs/prd.md`
 
-## Session start
-Read `.codex/knowledge/project/session-handoff.md` before accepting any task.
-
-## Sources of truth (priority order)
-1. `docs/dev-handbook.md` — invariants, naming, DO NOT BREAK rules
-2. `docs/roadmap.md` — block sequencing, scope per block
-3. `docs/tech-spec.md` — architecture, data model, API
-4. `docs/design.md` — UX/UI contract (if applicable)
-5. `docs/prd.md` — product scope, non-goals
-6. `.codex/knowledge/**` — live project state
+## Project
+[Description from GitHub repo — 1-2 sentences from Phase 0 gh output]
+Stack: [stack from Phase 1]
+Platform: [platform from Phase 1]
+Docs: [docs/project-brief.md | docs/prd.md depending on doc mode]
 
 ## Hard rules
-- Never write code in `[APP_CODE_PATHS]` unless User explicitly asks
+- Never write code in [APP_CODE_PATHS] unless User explicitly asks
 - Never write code blocks inside TASK files
 - Never commit to `main` or `dev` directly
-- Never run: [INFRA_HARD_RULES — or "none specified"]
 - Never touch `.env*` files
+
+## Skills
+
+| Trigger | File |
+|---|---|
+| "init project" / "inizializza il progetto" | `.codex/skills/init-project.md` |
+| "init verifiers" / "crea verifier" | `.codex/skills/init-verifiers.md` |
+| "commit push pr" / "crea la pr" / "ship it" | `.codex/skills/commit-push-pr.md` |
 ```
 
 ---
 
-## Phase 4 — Initialize docs
+## Phase 4 — Initialize docs (execute immediately, no pause)
 
 ### Mode A — Lightweight
 
-Create `docs/project-brief.md` directly (no template to copy):
+Create `docs/project-brief.md`:
 
 ```markdown
 # [PROJECT_NAME] — Project Brief
 
 ## What it is
-[1-3 sentences on what you're building and for whom — filled from Phase 1 answers]
+[Description from GitHub repo (Phase 0) — or what User provided in Phase 1]
 
 ## What it is NOT
-[Leave blank — User fills in non-goals]
+[Leave blank — User fills in]
 
 ## Tech stack
 [Stack from Phase 1]
 
+## Start from
+[backend | frontend | fullstack] — [rationale: e.g. "backend first: valida la logica prima della UI"]
+
 ## Data model (rough)
-[Leave blank — User fills in as they go]
+[Leave blank — User fills in]
 
 ## Block 1 goal
 [Block 1 goal from Phase 1]
 ```
 
-Pre-fill "What it is" from the project name + stack collected in Phase 1. Leave the rest for the User.
-
-Report:
+Tell User:
 ```
-✅ docs/project-brief.md created (Mode A — Lightweight)
-
-Fill in before starting TASK-001:
-1. "What it is NOT" — 1-2 non-goals to prevent scope creep (5 min)
-2. "Data model" — key entities and main fields, rough is fine (10 min)
-Come back when done — I'll write TASK-001.
+✅ docs/project-brief.md creato (Mode A)
+Da completare prima di TASK-001:
+  1. "What it is NOT" — 1-2 non-goal (5 min)
+  2. "Data model" — entità principali e campi (10 min)
 ```
-
----
 
 ### Mode B — Full
-
-Copy the doc templates:
 
 ```bash
 cp docs/templates/prd-template.md       docs/prd.md
@@ -201,172 +237,117 @@ cp docs/templates/roadmap-template.md   docs/roadmap.md
 cp docs/templates/dev-handbook-template.md docs/dev-handbook.md
 ```
 
-Pre-fill from Phase 1 answers:
-- `docs/tech-spec.md` → fill in the tech stack section
-- `docs/roadmap.md` → fill in BLOCK-1 name and goal
-
-Leave `docs/prd.md` and `docs/dev-handbook.md` mostly blank for the User.
-
-Report:
-```
-✅ Doc templates copied (Mode B — Full)
-
-Minimum to start BLOCK-1 (fill these first):
-1. docs/prd.md — product vision and non-goals (15-30 min)
-2. docs/tech-spec.md — data model and API contracts (partially pre-filled)
-3. docs/roadmap.md — BLOCK-1 task list (partially pre-filled)
-Optional before BLOCK-2:
-4. docs/dev-handbook.md — invariants and naming conventions
-Come back when done — I'll write TASK-001.
-```
+Pre-fill in `docs/tech-spec.md`: tech stack section.
+Pre-fill in `docs/roadmap.md`: BLOCK-1 name, goal, and note about `START_FROM`.
 
 ---
 
-## Phase 5 — Initialize knowledge files
+## Phase 5 — Initialize knowledge files (execute immediately, no pause)
 
 ```bash
 cp .codex/templates/session-handoff-template.md .codex/knowledge/project/session-handoff.md
 ```
 
-Fill in `session-handoff.md` with the initial state:
-- Active block: BLOCK-1 — [block 1 goal from Phase 1]
-- Block branch: `block/BLOCK-1-setup` (to be created in Phase 6)
+Fill in `session-handoff.md`:
+- Active block: BLOCK-1 — [Block 1 goal]
+- Block branch: `block/BLOCK-1-[slug]` (slug = 2-3 words from goal, kebab-case)
 - Last merged task: none
-- Next candidate task: TASK-001 (to be defined after docs are filled)
-- Pending items: fill docs before starting TASK-001
-
-Create the first block brief:
+- Next candidate task: TASK-001
+- Pending items: complete docs before starting TASK-001
 
 ```bash
-cp .codex/templates/block-brief-template.md ".codex/knowledge/BLOCK-1-setup-brief.md"
+cp .codex/templates/block-brief-template.md ".codex/knowledge/BLOCK-1-[slug]-brief.md"
 ```
 
-Fill in the block brief with:
-- Block goal from Phase 1
-- Status: PLANNING
-- Note: "Task list to be defined after docs/prd.md and docs/tech-spec.md are filled in"
+Fill in block brief: goal, `START_FROM` choice, status = PLANNING.
 
 ---
 
-## Phase 6 — Initialize git
+## Phase 6 — Initialize git (execute immediately, no pause)
 
-Check if git is already initialized:
-
+Check current git state:
 ```bash
 git status 2>/dev/null
+git branch -a 2>/dev/null
 ```
 
-If not initialized:
-```bash
-git init
-git add .
-git commit -m "chore: initialize [PROJECT_NAME] from agent-framework template"
-git branch -M main
-```
-
-If already initialized (e.g. cloned from template): check current state, commit any changes from Phases 2-5:
+If already on `main` with an initial commit (cloned from template):
 ```bash
 git add .
-git commit -m "chore: initialize [PROJECT_NAME] — apply agent-framework setup"
+git commit -m "chore: initialize [PROJECT_NAME] — agent-framework setup complete"
 ```
 
-Create the branch structure:
+Create branch structure. Use the Block 1 slug from Phase 5:
 ```bash
 git checkout -b dev
-git checkout -b block/BLOCK-1-setup
-git checkout dev
-git checkout block/BLOCK-1-setup
+git push -u origin dev
+git checkout -b block/BLOCK-1-[slug]
+git push -u origin block/BLOCK-1-[slug]
 ```
 
-Report the final branch state:
-```
-Branches created:
-  main      ← production (merge from dev only on explicit User request)
-  dev       ← stable integration
-  block/BLOCK-1-setup  ← current working branch ← YOU ARE HERE
-```
+Stay on `block/BLOCK-1-[slug]` after creation.
 
 ---
 
-## Phase 7 — Optional extensions
+## Phase 7 — Optional extensions (execute immediately, no pause)
 
-Ask the User (single question, multi-select):
+Ask in a single message (this is the only question after confirmation):
 
 ```
-Which optional extensions do you want to activate?
-□ Playwright E2E tests — Codex writes and runs browser tests per task (recommended for web UI)
-□ Parallel agents — run independent tasks simultaneously
-□ Domain routing — specialized agents per domain (DB, UI, API)
-□ Self-eval loop — Codex self-retries against objective criteria
-□ None for now
+Vuoi attivare estensioni opzionali? (puoi saltare e aggiungerle dopo)
+□ Playwright — Codex scrive ed esegue test E2E per ogni task (consigliato per UI web)
+□ Parallel agents — task indipendenti in parallelo
+□ Self-eval loop — Codex si auto-corregge su criteri oggettivi
+□ Nessuna per ora
 ```
 
-For each selected extension, follow the activation instructions in `.codex/extensions/[name]/README.md`.
+For each activated extension, follow `.codex/extensions/[name]/README.md` activation instructions.
 
 ---
 
-## Phase 8 — Final verification
-
-Run the setup verification checklist:
+## Phase 8 — Final verification (execute immediately, no pause)
 
 ```bash
-# 1. No placeholders remaining
-grep -r "{{" .codex/ && echo "PLACEHOLDERS FOUND" || echo "✅ No placeholders"
+# Placeholders
+grep -r '{{' .codex/ --include='*.md' | grep -v '<\!--' | grep -v 'templates/' | grep -v 'skills/init-project' | grep -v 'extensions/'
 
-# 2. Required files — adapt to doc mode
-# Mode A: check for project-brief.md
-# Mode B: check for prd.md, tech-spec.md, roadmap.md
-if [ "$DOC_MODE" = "A" ]; then
-  DOC_FILES="CLAUDE.md docs/project-brief.md .codex/knowledge/project/session-handoff.md"
-else
-  DOC_FILES="CLAUDE.md docs/prd.md docs/tech-spec.md docs/roadmap.md .codex/knowledge/project/session-handoff.md"
-fi
-for f in $DOC_FILES; do
+# Required files
+for f in CLAUDE.md .codex/knowledge/project/session-handoff.md; do
   [ -f "$f" ] && echo "✅ $f" || echo "❌ MISSING: $f"
 done
 
-# 3. Git branches
+# Doc mode file
+[ "$DOC_MODE" = "A" ] && DOC_CHECK="docs/project-brief.md" || DOC_CHECK="docs/prd.md"
+[ -f "$DOC_CHECK" ] && echo "✅ $DOC_CHECK" || echo "❌ MISSING: $DOC_CHECK"
+
+# Branches
 git branch -a
 ```
 
+If any check fails: fix it before Phase 9.
+
 ---
 
-## Phase 9 — Handoff summary
+## Phase 9 — Handoff summary (final output)
 
-**Mode A:**
 ```
-✅ [PROJECT_NAME] initialized (Lightweight)
+✅ [PROJECT_NAME] inizializzato ([Lightweight | Full])
 
-Setup complete:
-  ✅ Placeholders replaced in .codex/
-  ✅ CLAUDE.md created
-  ✅ docs/project-brief.md created
-  ✅ session-handoff.md initialized
-  ✅ Git: main / dev / block/BLOCK-1-setup branches created
+Completato:
+  ✅ Placeholder sostituiti in .codex/
+  ✅ CLAUDE.md scritto (da repo GitHub: [name] — [description])
+  ✅ [docs/project-brief.md | doc templates] pronti
+  ✅ session-handoff.md e block brief inizializzati
+  ✅ Branch: main / dev / block/BLOCK-1-[slug]
 
-Next steps (2, fast):
-  1. Fill in "What it is NOT" + "Data model" in docs/project-brief.md (15 min)
-  Come back when done — I'll write TASK-001.
+Punto di partenza scelto: [backend | frontend | fullstack]
+  → Block 1 consegna: [goal]
+  → Block 2 consegnerà: [suggerisci il completamento naturale]
 
-Current branch: block/BLOCK-1-setup
-```
+Prossimi passi:
+  [Mode A] Compila "What it is NOT" e "Data model" in docs/project-brief.md (15 min)
+  [Mode B] Compila docs/prd.md e docs/tech-spec.md (45-60 min)
+  Poi torna — scrivo TASK-001.
 
-**Mode B:**
-```
-✅ [PROJECT_NAME] initialized (Full)
-
-Setup complete:
-  ✅ Placeholders replaced in .codex/
-  ✅ CLAUDE.md created
-  ✅ Doc templates copied to docs/
-  ✅ session-handoff.md initialized
-  ✅ Git: main / dev / block/BLOCK-1-setup branches created
-
-Next steps (in order):
-  1. Fill docs/prd.md — product vision, non-goals, 2-3 key flows (30 min)
-  2. Fill docs/tech-spec.md — data model and API contracts (45 min)
-  3. Fill docs/roadmap.md — BLOCK-1 task list (15 min)
-  Come back when done — I'll write TASK-001.
-
-Current branch: block/BLOCK-1-setup
+Branch corrente: block/BLOCK-1-[slug]
 ```
