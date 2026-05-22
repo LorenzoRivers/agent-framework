@@ -77,17 +77,18 @@ Ask ALL questions in one message. Collect all answers before making any change.
 
 6. **Runtime / deploy platform** — (e.g. `Replit`, `Vercel`, `Fly.io`, `local`)
 
-7. **Punto di partenza di Block 1** — se il progetto ha sia frontend che backend:
-   - **Backend first** — Block 1 = API + data model → Block 2 = UI. Consigliato: valida la logica prima di costruire l'interfaccia.
-   - **Frontend first** — Block 1 = UI con dati mock → Block 2 = backend reale + wire-up. Utile quando il design guida le decisioni.
-   - **Full-stack insieme** — Block 1 = schema + API + UI insieme. Solo per progetti molto piccoli (≤ 3 endpoint, ≤ 2 schermate).
-   - **N/A** — progetto solo backend, solo frontend, o CLI.
-   Record as `START_FROM = backend | frontend | fullstack | na`.
+7. **Qual è la tua principale incertezza in Block 1?** — guida la scelta di cosa costruire prima:
+   - **A — UX/design** → *frontend first*: non so ancora esattamente cosa vedrà l'utente. Block 1 = UI con dati mock; Block 2 = backend reale + wire-up. Usa quando l'interfaccia è complessa o unica, e le decisioni di UX guidano la forma del backend.
+   - **B — Logica/dati** → *backend first*: so già come sarà la UI (pattern standard), non so come funzionerà la logica. Block 1 = API + data model; Block 2 = UI. Usa quando il data model o la business logic sono la parte difficile.
+   - **C — Vertical slice** → *una feature completa alla volta*: Block 1 = schema + API + UI di una singola feature. Solo per app molto piccole (≤ 3 feature totali) dove puoi tenere tutto in testa.
+   - **N/A** — progetto solo backend, solo frontend, o CLI: la domanda non si applica.
+   Record as `START_FROM = frontend | backend | slice | na`.
 
 8. **Block 1 goal** — una frase su cosa consegna Block 1 (suggerisci in base alla risposta precedente):
-   - backend → e.g. `API REST CRUD con Express + schema dati`
-   - frontend → e.g. `UI React con dati mock, navigazione completa`
-   - fullstack → e.g. `App todo completa: schema + API + UI`
+   - frontend (A) → e.g. `UI React con dati mock, navigazione e flussi principali`
+   - backend (B) → e.g. `API REST CRUD con Express, schema dati e validazione`
+   - slice (C) → e.g. `Feature X completa: schema + API + UI end-to-end`
+   - n/a → e.g. `[descrivere il deliverable specifico]`
 
 **Optional (blank = skip):**
 
@@ -340,9 +341,9 @@ Completato:
   ✅ session-handoff.md e block brief inizializzati
   ✅ Branch: main / dev / block/BLOCK-1-[slug]
 
-Punto di partenza scelto: [backend | frontend | fullstack]
+Incertezza principale: [UX/design → frontend first | Logica/dati → backend first | Vertical slice | N/A]
   → Block 1 consegna: [goal]
-  → Block 2 consegnerà: [suggerisci il completamento naturale]
+  → Block 2 consegnerà: [completamento naturale — e.g. se frontend first: "backend reale + wire-up"; se backend first: "UI completa + integrazione"]
 
 Prossimi passi:
   [Mode A] Compila "What it is NOT" e "Data model" in docs/project-brief.md (15 min)
