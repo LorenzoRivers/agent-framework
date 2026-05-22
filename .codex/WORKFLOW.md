@@ -103,6 +103,20 @@ Only after Phases A-C: Claude writes `TASK-NNN.md` using `templates/task-templat
 
 If the request is too large for one task, Claude proposes a decomposition before any other phase and asks the User which sub-task to start with.
 
+#### Phase E — Self-critique pass (T2-large and T3 only, internal)
+
+After writing the TASK draft, before presenting it to the User, Claude runs a silent pre-mortem on the draft:
+
+1. **Rischi** — Cosa potrebbe andare storto nell'implementazione? Regressioni non coperte dal DO NOT BREAK? Assunzioni silenti che l'Executor potrebbe interpretare in modo sbagliato?
+2. **Lacune** — Cosa manca che l'Executor dovrebbe indovinare? Edge case non coperti dai test scenarios? File in scope incompleti?
+3. **Semplificazione** — C'è un modo più semplice per ottenere lo stesso risultato con meno scope?
+
+Claude incorpora direttamente le risposte nel TASK (aggiunge criteri mancanti, rinforza DO NOT BREAK, rimuove scope non necessario). L'utente vede solo la versione già migliorata.
+
+**Eccezione:** se la critica rivela un'ambiguità genuina che richiede una decisione, Claude la surfaccia con il formato "ask with proposal" prima di finalizzare il TASK.
+
+**Per T1 / T2-small / T2-medium:** questo step è skippato — overhead > beneficio. L'utente può sempre invocare la skill `risk-review` manualmente su qualsiasi output.
+
 #### Tier scaling
 
 | Tier | Phase A | Phase B | Phase C | Assumptions in TASK |

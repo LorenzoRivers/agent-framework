@@ -79,6 +79,7 @@ Reference docs (read only what the task touches):
 | "init project" / "inizializza il progetto" | `skills/init-project.md` |
 | "init verifiers" / "crea verifier" | `skills/init-verifiers.md` |
 | "commit push pr" / "crea la pr" / "ship it" | `skills/commit-push-pr.md` |
+| "analizza i rischi" / "quali sono i rischi?" / "pre-mortem" | `skills/risk-review.md` |
 
 ---
 
