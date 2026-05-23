@@ -266,27 +266,64 @@ Fill in block brief: goal, `START_FROM` choice, status = PLANNING.
 
 ## Phase 6 — Initialize git (execute immediately, no pause)
 
-Check current git state:
+### Step 6.1 — Read current state
+
 ```bash
 git status 2>/dev/null
 git branch -a 2>/dev/null
 ```
 
-If already on `main` with an initial commit (cloned from template):
+Record which branches already exist locally and on remote. This determines what to create vs. what to skip.
+
+### Step 6.2 — Commit setup changes
+
+If there are uncommitted changes from Phases 2–5 (there will be):
 ```bash
 git add .
 git commit -m "chore: initialize [PROJECT_NAME] — agent-framework setup complete"
 ```
 
-Create branch structure. Use the Block 1 slug from Phase 5:
+If git is not initialized yet (fresh project, no repo):
 ```bash
-git checkout -b dev
-git push -u origin dev
+git init
+git add .
+git commit -m "chore: initialize [PROJECT_NAME] from agent-framework template"
+git branch -M main
+git remote add origin [remote URL if known]
+```
+
+### Step 6.3 — Create missing branches only
+
+For each branch, check if it exists before creating it:
+
+**`dev` branch:**
+```bash
+# Only if dev does not exist locally
+git checkout -b dev 2>/dev/null || git checkout dev
+# Only if dev does not exist on remote
+git push -u origin dev 2>/dev/null || true
+```
+
+**`block/BLOCK-1-[slug]` branch:**
+```bash
+# Always create fresh from current branch (dev or main)
+git checkout dev 2>/dev/null || true
 git checkout -b block/BLOCK-1-[slug]
 git push -u origin block/BLOCK-1-[slug]
 ```
 
 Stay on `block/BLOCK-1-[slug]` after creation.
+
+### Step 6.4 — Report branch state
+
+```
+Branch state:
+  main                    ← [already existed | created]
+  dev                     ← [already existed | created]
+  block/BLOCK-1-[slug]    ← created ← YOU ARE HERE
+```
+
+**Note for existing projects:** if the project already has feature branches or other branches, they are left untouched. The framework only adds the branches it needs.
 
 ---
 
