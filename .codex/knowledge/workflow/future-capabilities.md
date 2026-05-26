@@ -39,3 +39,16 @@ Useful in isolation but not worth adding workflow overhead for. Use the native C
 If a batch refactor is genuinely mechanical and safe (e.g., a package rename forced by a breaking upstream change), it can be executed ad-hoc without a framework step. It doesn't need to be a default capability.
 
 **Revisit if:** a project consistently produces the same mechanical refactor need across multiple blocks, suggesting a structural pattern worth automating.
+
+---
+
+## Tool esterni da valutare — fase pre-implementazione
+
+Questi tool operano *prima* di agent-framework (discovery, visual direction, design system) — non durante l'implementazione. Il framework governa da "so cosa costruire" in poi; questi governano la fase precedente.
+
+| Tool | Cosa fa | Stato |
+|---|---|---|
+| **open-design.ai** | 132 skill di design + 150 design system come markdown, adapter per Claude Code/Codex/Cursor. Output: HTML/PDF/PPTX. Apache-2.0, locale, BYOK. | Da provare su un progetto reale. Se utile → repo dedicata, non integrazione in agent-framework. |
+| **Claude Design** | Visual direction e design system via Claude. Trovato utile in pratica. | Già in uso come tool separato — nessuna integrazione necessaria. |
+
+**Principio guida:** agent-framework non è un design tool. Ha già capacità leggere di design (`docs/design.md`, `docs/templates/`). Aggiungere tool di design pesanti ne snatura lo scopo. Il confine è: design prima o in parallelo all'implementazione, non dentro di essa.
